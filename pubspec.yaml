@@ -1,0 +1,85 @@
+name: faretrackbd
+description: "FareTrack BD - Bus Fare Tracking App for Dhaka City"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+
+  # Location
+  geolocator: ^13.0.2
+  permission_handler: ^11.3.1
+  google_maps_flutter: ^2.9.0
+
+  # Background Service
+  flutter_background_service: ^5.0.6
+  flutter_local_notifications: ^18.0.1
+
+  # Map
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Storage
+  shared_preferences: ^2.3.4
+
+  # Animations
+  flutter_animate: ^4.5.2
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Routing
+  go_router: ^14.8.1
+
+  # HTTP
+  http: ^1.2.0
+
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.0.0
+  cloud_firestore: ^5.4.0
+  firebase_storage: ^12.0.0
+  firebase_messaging: ^15.0.0
+  firebase_analytics: ^11.0.0
+
+  # Social Auth
+  google_sign_in: ^6.2.2
+  flutter_facebook_auth: ^7.1.1
+
+  # Gemini AI
+  google_generative_ai: ^0.4.7
+
+  # Sensors
+  sensors_plus: ^5.0.1
+
+  # Speech-to-Text
+  speech_to_text: ^7.0.0
+
+  # Utilities
+  uuid: ^4.5.1
+  intl: ^0.19.0
+  image: ^4.8.0
+  share_plus: ^13.1.0
+  pdf: ^3.12.0
+  path_provider: ^2.1.6
+  url_launcher: ^6.3.1
+  flutter_tts: ^4.2.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/bus_data.json
+    - assets/fonts/

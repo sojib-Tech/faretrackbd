@@ -1,0 +1,23 @@
+{
+  "project_info": {
+    "project_number": "680894620786",
+    "project_id": "faretrackbd",
+    "storage_bucket": "faretrackbd.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:680894620786:android:8293a9b556a7231d254eeb",
+        "android_client_info": {
+          "package_name": "com.faretrackbd.app"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVT0oorPNyXppM7YcmPtT9sdo1nVAwxek"
+        }
+      ]
+    }
+  ],
+  "configuration_version": "1"
+}
