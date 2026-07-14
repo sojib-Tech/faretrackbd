@@ -82,4 +82,5 @@ flutter:
 
   assets:
     - assets/bus_data.json
+    - assets/dhaka_zones.json
     - assets/fonts/

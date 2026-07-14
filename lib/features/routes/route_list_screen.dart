@@ -107,6 +107,7 @@ class _RouteCard extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
+          FocusScope.of(context).unfocus();
           if (route is BusRoute) {
             Navigator.push(
               context,

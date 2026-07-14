@@ -32,6 +32,7 @@ import 'screens/ai_assistant_screen.dart';
 import 'screens/accident_map_screen.dart';
 import 'screens/sos_settings_screen.dart';
 import 'screens/email_screen.dart';
+import 'features/journey/journey_planner_screen.dart';
 
 GoRouter _createRouter(Ref ref) {
   const restrictedRoutes = {
@@ -175,6 +176,13 @@ GoRouter _createRouter(Ref ref) {
         path: '/email-verification',
         pageBuilder: (context, state) => _buildSlideTransition(
           const EmailScreen(),
+          state,
+        ),
+      ),
+      GoRoute(
+        path: '/journey-planner',
+        pageBuilder: (context, state) => _buildSlideTransition(
+          const JourneyPlannerScreen(),
           state,
         ),
       ),

@@ -75,7 +75,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           _emailController.text,
           _passwordController.text,
         );
-    if (success && mounted) context.go('/home');
+    if (success && mounted) {
+      FocusScope.of(context).unfocus();
+      context.go('/home');
+    }
   }
 
   Future<void> _handleSignUp() async {
@@ -195,7 +198,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             email,
             _passwordController.text,
           );
-      if (success && mounted) context.go('/home');
+      if (success && mounted) {
+        FocusScope.of(context).unfocus();
+        context.go('/home');
+      }
     } catch (e, stack) {
       debugPrint('--- [UI CRASH]: $e');
       debugPrint('--- [UI CRASH] Stack: $stack');
@@ -216,7 +222,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
   Future<void> _handleGoogleSignIn() async {
     final success = await ref.read(authProvider.notifier).signInWithGoogle();
-    if (success && mounted) context.go('/home');
+    if (success && mounted) {
+      FocusScope.of(context).unfocus();
+      context.go('/home');
+    }
   }
 
   @override

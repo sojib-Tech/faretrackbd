@@ -266,8 +266,10 @@ class _AccidentMapScreenState extends State<AccidentMapScreen> {
                       severity: severity,
                       description: descController.text,
                     );
-                    if (mounted) Navigator.pop(context);
-                    descController.dispose();
+                    if (mounted) {
+                      descController.dispose();
+                      Navigator.pop(context);
+                    }
                     messenger.showSnackBar(
                       SnackBar(
                         content: Text(

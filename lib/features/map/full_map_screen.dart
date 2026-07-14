@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_constants.dart';
+import '../../data/dhaka_zone_data.dart';
 import '../../models/gps_point.dart';
+import '../../models/journey/stop_coordinate.dart';
+import '../../models/zone_model.dart';
 import '../home/widgets/bus_animated_marker.dart';
 
 class FullMapScreen extends StatefulWidget {
@@ -20,6 +24,9 @@ class _FullMapScreenState extends State<FullMapScreen> {
   late MapController _mapController;
   List<LatLng> _routeLatLngs = [];
   LatLng? _currentPosition;
+  List<DhakaZone> _zones = [];
+  bool _zonesLoaded = false;
+  final ValueNotifier<LayerHitResult<DhakaZone>?> _zoneHitNotifier = ValueNotifier(null);
 
   @override
   void initState() {
@@ -35,9 +42,23 @@ class _FullMapScreenState extends State<FullMapScreen> {
       _currentPosition = const LatLng(23.8103, 90.4125);
     }
 
+    _loadZones();
+
+    _zoneHitNotifier.addListener(_onZoneHit);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fitMapBounds();
     });
+  }
+
+  Future<void> _loadZones() async {
+    final zones = await DhakaZoneData.getZones();
+    if (mounted) {
+      setState(() {
+        _zones = zones;
+        _zonesLoaded = true;
+      });
+    }
   }
 
   void _fitMapBounds() {
@@ -54,6 +75,8 @@ class _FullMapScreenState extends State<FullMapScreen> {
 
   @override
   void dispose() {
+    _zoneHitNotifier.removeListener(_onZoneHit);
+    _zoneHitNotifier.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -89,6 +112,22 @@ class _FullMapScreenState extends State<FullMapScreen> {
                 urlTemplate: AppConstants.tileUrl,
                 userAgentPackageName: 'com.faretrackbd.app',
               ),
+              if (_zonesLoaded && _zones.isNotEmpty)
+                PolygonLayer(
+                  hitNotifier: _zoneHitNotifier,
+                  polygons: _zones.map((zone) {
+                    final points = zone.coordinates[0]
+                        .map((coord) => LatLng(coord[1], coord[0]))
+                        .toList();
+                    return Polygon(
+                      points: points,
+                      color: zone.fillColor.withValues(alpha: 0.2),
+                      borderColor: zone.borderColor,
+                      borderStrokeWidth: 2,
+                      hitValue: zone,
+                    );
+                  }).toList(),
+                ),
               if (_routeLatLngs.length > 1)
                 PolylineLayer(
                   polylines: [
@@ -191,6 +230,173 @@ class _FullMapScreenState extends State<FullMapScreen> {
         ],
       ),
     );
+  }
+
+  void _onZoneHit() {
+    final result = _zoneHitNotifier.value;
+    if (result != null && result.hitValues.isNotEmpty) {
+      _onZoneTap(result.hitValues.first);
+    }
+  }
+
+  void _onZoneTap(DhakaZone zone) async {
+    final stops = await DhakaZoneData.getStopsInZone(zone);
+    if (!mounted) return;
+    _showZoneStops(zone, stops);
+  }
+
+  void _showZoneStops(DhakaZone zone, List<StopCoordinate> stops) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: zone.fillColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          zone.name,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: AppConstants.fontBengali,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          '${stops.length} টি স্টপ',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontFamily: AppConstants.fontBengali,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            if (stops.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'এই এলাকায় কোনো স্টপ পাওয়া যায়নি',
+                  style: TextStyle(
+                    fontFamily: AppConstants.fontBengali,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  itemCount: stops.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                  ),
+                  itemBuilder: (_, i) {
+                    final stop = stops[i];
+                    return ListTile(
+                      leading: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppConstants.primaryGreen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.directions_bus_rounded,
+                          size: 18,
+                          color: AppConstants.primaryGreen,
+                        ),
+                      ),
+                      title: Text(
+                        stop.nameBn,
+                        style: TextStyle(
+                          fontFamily: AppConstants.fontBengali,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      subtitle: Text(
+                        stop.name,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.directions_rounded, color: AppConstants.primaryAccent),
+                        tooltip: 'দিকনির্দেশনা',
+                        onPressed: () => _openDirections(stop),
+                      ),
+                      onTap: () => _openDirections(stop),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openDirections(StopCoordinate stop) async {
+    final url = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lng}',
+    );
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   double _calculateHeading(GpsPoint from, GpsPoint to) {

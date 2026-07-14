@@ -62,7 +62,10 @@ class _EmailScreenState extends State<EmailScreen> {
         if (valid) {
           _showSnackBar('Verified!', isError: false);
           Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) Navigator.popUntil(context, (route) => route.isFirst);
+            if (mounted) {
+              FocusScope.of(context).unfocus();
+              Navigator.popUntil(context, (route) => route.isFirst);
+            }
           });
         } else {
           _showSnackBar('ভুল বা মেয়াদোত্তীর্ণ Code');

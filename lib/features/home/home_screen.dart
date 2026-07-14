@@ -16,7 +16,7 @@ import '../../services/shake_sos_service.dart';
 import '../../widgets/bus_search_delegate.dart';
 import '../../widgets/guest_badge.dart';
 import '../../widgets/guest_guard.dart';
-import '../routes/route_search_screen.dart';
+import '../journey/journey_planner_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -458,7 +458,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const RouteSearchScreen(),
+                            builder: (_) => const JourneyPlannerScreen(),
                           ),
                         ),
                         child: Container(
@@ -479,7 +479,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const RouteSearchScreen(),
+                            builder: (_) => const JourneyPlannerScreen(),
                           ),
                         ),
                         child: Container(
@@ -523,7 +523,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         GestureDetector(
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const RouteSearchScreen()),
+            MaterialPageRoute(builder: (_) => const JourneyPlannerScreen()),
           ),
           child: Container(
             width: double.infinity,

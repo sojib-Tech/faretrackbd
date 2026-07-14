@@ -1,6 +1,6 @@
 import '../models/bus_route.dart';
 import '../data/bus_route_data.dart';
-import '../core/constants/app_constants.dart';
+import '../core/utils/fare_calculator.dart';
 
 class FareCalculationResult {
   final BusRoute route;
@@ -17,16 +17,13 @@ class FareCalculationResult {
     required this.distanceKm,
   });
 
-  String get formattedFare => '৳${fare.toStringAsFixed(2)}';
+  String get formattedFare => '৳${fare.toInt()}';
   String get formattedDistance => '${distanceKm.toStringAsFixed(1)} কিমি';
 }
 
 class BusFareCalculator {
-  static double calculateFareByDistance(double distanceKm) {
-    final calculated = distanceKm * AppConstants.fareRatePerKm;
-    return calculated < AppConstants.minimumFare
-        ? AppConstants.minimumFare
-        : (calculated * 100).roundToDouble() / 100;
+  static double calculateFareByDistance(double distanceKm, {bool isMinibus = false}) {
+    return calculateDhakaBusFare(distanceKm, isMinibus: isMinibus).toDouble();
   }
 
   static FareCalculationResult? findFare({
@@ -80,9 +77,9 @@ class BusFareCalculator {
         if (route.stops[i].name.contains(toStop)) toIdx = i;
       }
       if (fromIdx != null && toIdx != null) {
-        final fare = route.getFare(fromIdx, toIdx);
         final distance = route.getDistanceBetween(fromIdx, toIdx);
-        if (fare != null && distance != null) {
+        if (distance != null && distance > 0) {
+          final fare = route.getFare(fromIdx, toIdx) ?? calculateDhakaBusFare(distance).toDouble();
           results.add(FareCalculationResult(
             route: route,
             fromStop: route.stops[fromIdx],
