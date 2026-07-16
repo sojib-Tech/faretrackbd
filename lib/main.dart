@@ -285,13 +285,6 @@ class _FareTrackAppState extends ConsumerState<FareTrackApp>
     // }
   }
 
-  void _autoSignOut() {
-    if (ref.read(authProvider).isAuthenticated) {
-      ref.read(authProvider.notifier).signOut();
-      ref.read(goRouterProvider).go('/auth');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeProvider);
