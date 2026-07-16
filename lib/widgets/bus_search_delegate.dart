@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
-import '../data/bus_search_data.dart';
-import '../models/bus_model.dart';
+import '../data/bus_route_data.dart';
+import '../models/bus_route.dart';
+import '../models/journey/journey_result.dart';
+import '../features/journey/journey_map_screen.dart';
 
-class BusSearchDelegate extends SearchDelegate<BusModel?> {
-  BusSearchDelegate() : super(
-    searchFieldLabel: 'বাস বা লোকেশন খুঁজুন...',
-    keyboardType: TextInputType.text,
-    textInputAction: TextInputAction.search,
-  );
+class BusSearchDelegate extends SearchDelegate<BusRoute?> {
+  BusSearchDelegate()
+      : super(
+          searchFieldLabel: 'বাস বা লোকেশন খুঁজুন...',
+          keyboardType: TextInputType.text,
+          textInputAction: TextInputAction.search,
+        );
 
   @override
   ThemeData appBarTheme(BuildContext context) {
@@ -55,25 +58,16 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
   Widget buildSuggestions(BuildContext context) => _buildResults(context);
 
   @override
-  void showResults(BuildContext context) {
-  }
+  void showResults(BuildContext context) {}
 
-  List<BusModel> _filterBuses(String query) {
+  List<BusRoute> _filterRoutes(String query) {
     if (query.isEmpty) return [];
-    final q = query.toLowerCase().trim();
-    return allBuses.where((bus) {
-      final matchesBangla = bus.banglaSearch.contains(q);
-      final matchesBanglish = bus.banglishSearch.toLowerCase().contains(q);
-      final matchesEnglish = bus.englishSearch.toLowerCase().contains(q);
-      final matchesNameEn = bus.busNameEn.toLowerCase().contains(q);
-      final matchesNameBn = bus.busNameBn.contains(q);
-      return matchesBangla || matchesBanglish || matchesEnglish || matchesNameEn || matchesNameBn;
-    }).toList();
+    return BusRouteData.search(query);
   }
 
   Widget _buildResults(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final results = _filterBuses(query);
+    final results = _filterRoutes(query);
 
     if (query.isEmpty) {
       return Center(
@@ -89,7 +83,8 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
                   color: isDark ? Colors.grey[900] : Colors.grey[100],
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Icon(Icons.search_rounded, size: 48, color: Colors.grey[400]),
+                child: Icon(Icons.directions_bus_rounded,
+                    size: 48, color: Colors.grey[400]),
               ),
               const SizedBox(height: 20),
               Text(
@@ -102,13 +97,31 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: isDark ? Colors.grey[900] : Colors.grey[100],
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   'যেমন: মিরপুর, গুলশান, ফার্মগেট, মতিঝিল',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: AppConstants.fontBengali,
+                    color: Colors.grey[400],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[900] : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'অথবা বাসের নাম: এ-২৮৫, চিড়িয়াখানা',
                   style: TextStyle(
                     fontSize: 13,
                     fontFamily: AppConstants.fontBengali,
@@ -136,11 +149,12 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
                   color: isDark ? Colors.grey[900] : Colors.grey[100],
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Icon(Icons.search_off_rounded, size: 48, color: Colors.grey[400]),
+                child: Icon(Icons.search_off_rounded,
+                    size: 48, color: Colors.grey[400]),
               ),
               const SizedBox(height: 16),
               Text(
-                '"$query" এর জন্য কিছু পাওয়া যায়নি',
+                '"$query" এর জন্য কিছু পাওয়া যায়নি',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -158,37 +172,42 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
       padding: const EdgeInsets.only(top: 8, bottom: 24),
       itemCount: results.length,
       itemBuilder: (_, i) {
-        final bus = results[i];
-        return _buildBusTile(context, bus, i, isDark);
+        final route = results[i];
+        return _buildRouteTile(context, route, i, isDark);
       },
     );
   }
 
-  Widget _buildBusTile(BuildContext context, BusModel bus, int index, bool isDark) {
-    final stops = bus.banglaSearch.split(',').map((s) => s.trim()).toList();
-    final previewStops = stops.length > 3
-        ? '${stops.first} → … → ${stops.last}'
-        : bus.banglaSearch;
+  Widget _buildRouteTile(
+      BuildContext context, BusRoute route, int index, bool isDark) {
+    final firstStop = route.stops.isNotEmpty ? route.stops.first.name : '';
+    final lastStop = route.stops.isNotEmpty ? route.stops.last.name : '';
+    final preview = route.stops.length > 2
+        ? '$firstStop → … → $lastStop'
+        : '$firstStop → $lastStop';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Card(
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         color: isDark ? Colors.grey[900] : Colors.grey[50],
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: () => _showBusRoute(context, bus, isDark),
+          onTap: () => _showBusRoute(context, route, isDark),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppConstants.primaryAccent.withValues(alpha: 0.12),
+                    color: AppConstants.primaryAccent
+                        .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -208,10 +227,11 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${bus.busNameBn} (${bus.busNameEn})',
+                        route.nameBn,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
+                          fontFamily: AppConstants.fontBengali,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -219,12 +239,14 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          Icon(Icons.route_rounded, size: 12, color: Colors.grey[400]),
+                          Icon(Icons.route_rounded,
+                              size: 12, color: Colors.grey[400]),
                           const SizedBox(width: 3),
                           Flexible(
                             child: Text(
-                              previewStops,
-                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                              preview,
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[500]),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -234,7 +256,26 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey[400]),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color:
+                        AppConstants.primaryGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${route.totalDistanceKm.toStringAsFixed(1)} কিমি',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppConstants.primaryGreen,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right_rounded,
+                    size: 20, color: Colors.grey[400]),
               ],
             ),
           ),
@@ -243,7 +284,10 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
     );
   }
 
-  void _showBusRoute(BuildContext context, BusModel bus, bool isDark) {
+  void _showBusRoute(BuildContext context, BusRoute route, bool isDark) {
+    final stops = route.stops;
+    final fare = route.getFare(0, stops.length - 1);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -256,7 +300,6 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
         minChildSize: 0.4,
         expand: false,
         builder: (_, scrollController) {
-          final stops = bus.banglaSearch.split(',').map((s) => s.trim()).toList();
           return Container(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -273,40 +316,125 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  bus.busNameBn,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: AppConstants.fontBengali,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            route.nameBn,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: AppConstants.fontBengali,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${route.nameEn} · ${route.routeNo}',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppConstants.primaryGreen
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${route.totalDistanceKm.toStringAsFixed(1)} কিমি',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppConstants.primaryGreen,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openRouteOnMap(context, route);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          AppConstants.primaryGreen,
+                          AppConstants.pineDeep,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.map_rounded,
+                            color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'মানচিত্রে দেখুন',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: AppConstants.fontBengali,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  bus.busNameEn,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'স্টপেজ তালিকা (${stops.length}টি)',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: AppConstants.fontBengali,
-                    color: isDark ? Colors.grey[300] : Colors.grey[700],
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      'স্টপেজ তালিকা (${stops.length}টি)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: AppConstants.fontBengali,
+                        color:
+                            isDark ? Colors.grey[300] : Colors.grey[700],
+                      ),
+                    ),
+                    if (fare != null) ...[
+                      const Spacer(),
+                      Text(
+                        'ভাড়া: ৳${fare.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppConstants.fareAmber,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Expanded(
                   child: ListView.separated(
                     controller: scrollController,
                     itemCount: stops.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1),
                     itemBuilder: (_, i) {
                       final isStart = i == 0;
                       final isEnd = i == stops.length - 1;
+                      final stopFare = route.getFare(0, i);
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
                           children: [
                             Column(
@@ -332,13 +460,24 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
                               ],
                             ),
                             const SizedBox(width: 12),
-                            Text(
-                              stops[i],
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontFamily: AppConstants.fontBengali,
+                            Expanded(
+                              child: Text(
+                                stops[i].name,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontFamily:
+                                      AppConstants.fontBengali,
+                                ),
                               ),
                             ),
+                            if (stopFare != null)
+                              Text(
+                                '৳${stopFare.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
                           ],
                         ),
                       );
@@ -349,6 +488,53 @@ class BusSearchDelegate extends SearchDelegate<BusModel?> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _openRouteOnMap(BuildContext context, BusRoute route) {
+    final segments = <JourneySegment>[];
+    final stops = route.stops;
+
+    if (stops.length >= 2) {
+      final allSegments = <String>[];
+      for (final stop in stops) {
+        allSegments.add(stop.name);
+      }
+
+      segments.add(BusSegment(
+        busNameEn: route.nameEn,
+        busNameBn: route.nameBn,
+        boardStop: stops.first.name,
+        alightStop: stops.last.name,
+        boardStopIndex: 0,
+        alightStopIndex: stops.length - 1,
+        fare: route.getFare(0, stops.length - 1) ?? 0,
+        distanceKm: route.totalDistanceKm,
+        travelTimeMinutes:
+            (route.totalDistanceKm / 20 * 60).round().toDouble(),
+        stopCount: stops.length - 1,
+        trafficLevel: TrafficLevel.moderate,
+        isAc: route.nameBn.contains('AC') ||
+            route.nameEn.toLowerCase().contains('ac'),
+        travelStops: allSegments,
+        route: route,
+      ));
+    }
+
+    if (segments.isEmpty) return;
+
+    final result = JourneyResult(
+      id: 'bus_route_${route.id}',
+      originName: stops.first.name,
+      destName: stops.last.name,
+      segments: segments,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => JourneyMapScreen(result: result),
       ),
     );
   }

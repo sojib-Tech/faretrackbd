@@ -20,7 +20,7 @@ class AppConstants {
   static const double headingSmoothingAlpha = 0.25;
 
   static const String tileUrl =
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
 
   static const String defaultMapCenter = '23.8103,90.4125';
   static const double defaultMapZoom = 13.0;

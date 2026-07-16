@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/app_constants.dart';
-import '../../data/dhaka_zone_data.dart';
 import '../../data/stop_coordinates.dart';
+import '../../data/dhaka_zone_data.dart';
 import '../../models/journey/journey_result.dart';
 import '../../models/zone_model.dart';
 
@@ -19,6 +19,7 @@ class JourneyMapScreen extends StatefulWidget {
 class _JourneyMapScreenState extends State<JourneyMapScreen> {
   late MapController _mapController;
   List<LatLng> _busRoutePoints = [];
+  List<String> _stopNames = [];
   LatLng? _origin;
   LatLng? _destination;
   List<DhakaZone> _zones = [];
@@ -35,6 +36,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
   void _extractRouteData() {
     final result = widget.result;
     final allPoints = <LatLng>[];
+    final names = <String>[];
 
     for (final seg in result.busSegments) {
       final route = seg.route;
@@ -52,6 +54,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
           final point = LatLng(coord.lat, coord.lng);
           if (allPoints.isEmpty || allPoints.last != point) {
             allPoints.add(point);
+            names.add(stopName);
           }
         }
       }
@@ -63,6 +66,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
     }
 
     _busRoutePoints = allPoints;
+    _stopNames = names;
   }
 
   Future<void> _loadZones() async {
@@ -130,9 +134,6 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
             options: MapOptions(
               initialCenter: _origin ?? const LatLng(23.8103, 90.4125),
               initialZoom: 13,
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all,
-              ),
             ),
             children: [
               TileLayer(
@@ -215,6 +216,49 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                       ),
                     ),
                   ],
+                ),
+              if (_busRoutePoints.length > 2)
+                MarkerLayer(
+                  markers: _busRoutePoints.asMap().entries.where((e) => e.key > 0 && e.key < _busRoutePoints.length - 1).map((e) {
+                    final name = e.key < _stopNames.length ? _stopNames[e.key] : '';
+                    return Marker(
+                      point: e.value,
+                      width: 24,
+                      height: 24,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (name.isNotEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(name, style: const TextStyle(fontFamily: AppConstants.fontBengali)),
+                                duration: const Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppConstants.primaryGreen, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${e.key}',
+                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppConstants.primaryGreen),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
             ],
           ),
