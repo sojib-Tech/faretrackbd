@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/dhaka_zone_data.dart';
+import '../../data/stop_coordinates.dart';
 import '../../models/gps_point.dart';
 import '../../models/journey/stop_coordinate.dart';
 import '../../models/zone_model.dart';
@@ -256,6 +257,37 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
                     ),
                   ],
                 ),
+              MarkerLayer(
+                markers: StopCoordinates.all.map((stop) {
+                  return Marker(
+                    point: LatLng(stop.lat, stop.lng),
+                    width: 28,
+                    height: 28,
+                    child: GestureDetector(
+                      onTap: () => _showStopInfo(stop),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppConstants.primaryGreen,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.directions_bus_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ],
           ),
           if (isActive)
@@ -750,6 +782,102 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
                   },
                 ),
               ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showStopInfo(StopCoordinate stop) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppConstants.primaryGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.directions_bus_rounded,
+                    color: AppConstants.primaryGreen,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        stop.nameBn,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: AppConstants.fontBengali,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        stop.name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _openDirections(stop);
+                    },
+                    icon: const Icon(Icons.directions_rounded, size: 18),
+                    label: Text(
+                      'দিকনির্দেশনা',
+                      style: TextStyle(
+                        fontFamily: AppConstants.fontBengali,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
           ],
         ),
