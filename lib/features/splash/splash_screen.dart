@@ -1,12 +1,16 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/storage_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/location_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -38,20 +42,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _navigateAfterDelay() async {
-    await Future.delayed(AppConstants.splashDuration);
+    await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
 
     final storage = ref.read(storageServiceProvider);
-    var authState = ref.read(authProvider);
-
-    // Wait for auth state to finish loading (race condition fix)
-    int waitCount = 0;
-    while (authState.isLoading && waitCount < 30) {
-      await Future.delayed(const Duration(milliseconds: 200));
-      if (!mounted) return;
-      authState = ref.read(authProvider);
-      waitCount++;
-    }
+    final authState = ref.read(authProvider);
 
     final onboardingComplete = storage.isOnboardingComplete();
 
@@ -132,7 +127,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       .animate()
                       .scale(duration: 600.ms, curve: Curves.easeOutBack)
                       .fadeIn(duration: 400.ms),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+                  _LocationCircle(),
+                  const SizedBox(height: 24),
                   const _AnimatedAppName(),
                   const SizedBox(height: 12),
                   Text(
@@ -179,6 +176,162 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         ),
       ),
     );
+  }
+}
+
+class _LocationCircle extends ConsumerStatefulWidget {
+  const _LocationCircle();
+
+  @override
+  ConsumerState<_LocationCircle> createState() => _LocationCircleState();
+}
+
+class _LocationCircleState extends ConsumerState<_LocationCircle>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  LatLng? _currentPos;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _initLocation();
+  }
+
+  Future<void> _initLocation() async {
+    final locationService = ref.read(locationServiceProvider);
+    final hasPermission = await locationService.hasPermissions();
+    if (!hasPermission) {
+      await locationService.requestPermissions();
+    }
+    final point = await locationService.getCurrentLocation();
+    if (point != null && mounted) {
+      setState(() {
+        _currentPos = LatLng(point.latitude, point.longitude);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final center = _currentPos ?? const LatLng(23.8103, 90.4125);
+
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        final scale = 0.95 + _pulseController.value * 0.05;
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            width: 130,
+            height: 130,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppConstants.primaryGreen.withValues(alpha: 0.3 + _pulseController.value * 0.2),
+                  blurRadius: 20 + _pulseController.value * 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    options: MapOptions(
+                      initialCenter: center,
+                      initialZoom: 14,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: AppConstants.tileUrl,
+                        userAgentPackageName: 'com.faretrackbd.app',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: center,
+                            width: 20,
+                            height: 20,
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blue.withValues(alpha: 0.5),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    bottom: 4,
+                    right: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            'আপনার অবস্থান',
+                            style: TextStyle(
+                              fontSize: 7,
+                              color: Colors.white,
+                              fontFamily: AppConstants.fontBengali,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).animate().scale(duration: 800.ms, curve: Curves.easeOutBack)
+     .fadeIn(duration: 600.ms, delay: 400.ms);
   }
 }
 
@@ -256,7 +409,7 @@ class _RoutePainter extends CustomPainter {
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
 
-    final path = Path();
+    final path = ui.Path();
     final points = <Offset>[];
 
     const numPoints = 20;

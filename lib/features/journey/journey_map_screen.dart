@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/road_router.dart';
 import '../../data/stop_coordinates.dart';
 import '../../data/dhaka_zone_data.dart';
 import '../../models/journey/journey_result.dart';
@@ -24,6 +25,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
   LatLng? _destination;
   List<DhakaZone> _zones = [];
   bool _loaded = false;
+  List<LatLng> _roadRoutePoints = [];
 
   @override
   void initState() {
@@ -77,6 +79,17 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
         _loaded = true;
       });
       _fitBounds();
+      _fetchRoadRoute();
+    }
+  }
+
+  Future<void> _fetchRoadRoute() async {
+    if (_busRoutePoints.length < 2) return;
+    final roadPoints = await RoadRouter.getRoadRoute(_busRoutePoints);
+    if (mounted && roadPoints.length > _busRoutePoints.length) {
+      setState(() {
+        _roadRoutePoints = roadPoints;
+      });
     }
   }
 
@@ -154,11 +167,11 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                     );
                   }).toList(),
                 ),
-              if (_busRoutePoints.length > 1)
+              if ((_roadRoutePoints.isNotEmpty ? _roadRoutePoints : _busRoutePoints).length > 1)
                 PolylineLayer(
                   polylines: [
                     Polyline(
-                      points: _busRoutePoints,
+                      points: _roadRoutePoints.isNotEmpty ? _roadRoutePoints : _busRoutePoints,
                       color: AppConstants.primaryGreen,
                       strokeWidth: 5,
                       borderColor: Colors.white.withValues(alpha: 0.6),

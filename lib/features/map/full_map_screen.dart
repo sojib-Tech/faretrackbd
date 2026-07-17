@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -12,6 +13,7 @@ import '../../data/stop_coordinates.dart';
 import '../../models/gps_point.dart';
 import '../../models/journey/stop_coordinate.dart';
 import '../../models/zone_model.dart';
+import '../../core/utils/road_router.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../home/widgets/bus_animated_marker.dart';
@@ -36,6 +38,8 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
   Timer? _updateTimer;
   Duration _elapsed = Duration.zero;
   bool _initialCenterDone = false;
+  List<LatLng> _roadRoutePoints = [];
+  List<StopCoordinate> _nearbyStops = [];
 
   @override
   void initState() {
@@ -47,6 +51,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
           .map((p) => LatLng(p.latitude, p.longitude))
           .toList();
       _currentPosition = _routeLatLngs.last;
+      _fetchRoadRoute();
     }
 
     _loadZones();
@@ -56,10 +61,12 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
       if (!mounted) return;
       final tripState = ref.read(tripProvider);
       if (tripState.isActive && tripState.currentTrip != null) {
-        setState(() {
-          _elapsed =
-              DateTime.now().difference(tripState.currentTrip!.startTime);
-        });
+        final newElapsed = DateTime.now().difference(tripState.currentTrip!.startTime);
+        if (newElapsed.inSeconds != _elapsed.inSeconds) {
+          setState(() {
+            _elapsed = newElapsed;
+          });
+        }
       }
     });
 
@@ -96,6 +103,41 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
 
     if (mounted) {
       ref.read(locationProvider.notifier).startListening();
+    }
+  }
+
+  double _calcDistanceKm(LatLng a, LatLng b) {
+    const R = 6371.0;
+    final dLat = (b.latitude - a.latitude) * pi / 180;
+    final dLon = (b.longitude - a.longitude) * pi / 180;
+    final h = sin(dLat / 2) * sin(dLat / 2) +
+        cos(a.latitude * pi / 180) *
+            cos(b.latitude * pi / 180) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    return R * 2 * atan2(sqrt(h), sqrt(1 - h));
+  }
+
+  void _updateNearbyStops() {
+    if (_currentPosition == null) return;
+    final allStops = StopCoordinates.all;
+    final withDistance = allStops.map((s) {
+      final d = _calcDistanceKm(_currentPosition!, LatLng(s.lat, s.lng));
+      return _StopWithDistance(stop: s, distanceKm: d);
+    }).where((sd) => sd.distanceKm <= 2.0).toList();
+    withDistance.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    setState(() {
+      _nearbyStops = withDistance.map((sd) => sd.stop).toList();
+    });
+  }
+
+  Future<void> _fetchRoadRoute() async {
+    if (_routeLatLngs.length < 2) return;
+    final roadPoints = await RoadRouter.getRoadRoute(_routeLatLngs);
+    if (mounted && roadPoints.length > _routeLatLngs.length) {
+      setState(() {
+        _roadRoutePoints = roadPoints;
+      });
     }
   }
 
@@ -153,6 +195,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
           (_currentPosition!.latitude - newPos.latitude).abs() > 0.00001 ||
           (_currentPosition!.longitude - newPos.longitude).abs() > 0.00001) {
         _currentPosition = newPos;
+        _updateNearbyStops();
       }
     }
 
@@ -161,6 +204,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
           .map((p) => LatLng(p.latitude, p.longitude))
           .toList();
       _currentPosition = _routeLatLngs.last;
+      if (_roadRoutePoints.isEmpty && _routeLatLngs.length >= 2) {
+        _fetchRoadRoute();
+      }
     }
 
     return Scaffold(
@@ -203,11 +249,11 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
                     );
                   }).toList(),
                 ),
-              if (_routeLatLngs.length > 1)
+              if ((_roadRoutePoints.isNotEmpty ? _roadRoutePoints : _routeLatLngs).length > 1)
                 PolylineLayer(
                   polylines: [
                     Polyline(
-                      points: _routeLatLngs,
+                      points: _roadRoutePoints.isNotEmpty ? _roadRoutePoints : _routeLatLngs,
                       color: AppConstants.primaryAccent
                           .withValues(alpha: 0.8),
                       strokeWidth: 4,
@@ -257,37 +303,62 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
                     ),
                   ],
                 ),
-              MarkerLayer(
-                markers: StopCoordinates.all.map((stop) {
-                  return Marker(
-                    point: LatLng(stop.lat, stop.lng),
-                    width: 28,
-                    height: 28,
-                    child: GestureDetector(
-                      onTap: () => _showStopInfo(stop),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppConstants.primaryGreen,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: Colors.white, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.directions_bus_rounded,
-                          size: 14,
-                          color: Colors.white,
+              if (_nearbyStops.isNotEmpty)
+                MarkerLayer(
+                  markers: _nearbyStops.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final stop = entry.value;
+                    final dist = _calcDistanceKm(_currentPosition!, LatLng(stop.lat, stop.lng));
+                    final isNearest = i == 0;
+                    final size = isNearest ? 36.0 : 28.0;
+                    return Marker(
+                      point: LatLng(stop.lat, stop.lng),
+                      width: size,
+                      height: size,
+                      child: GestureDetector(
+                        onTap: () => _showStopInfo(stop),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isNearest
+                                ? AppConstants.primaryGreen
+                                : AppConstants.primaryGreen.withValues(alpha: 0.7),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: Colors.white, width: isNearest ? 3 : 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isNearest
+                                    ? AppConstants.primaryGreen.withValues(alpha: 0.5)
+                                    : Colors.black.withValues(alpha: 0.2),
+                                blurRadius: isNearest ? 10 : 4,
+                                spreadRadius: isNearest ? 1 : 0,
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.directions_bus_rounded,
+                                size: isNearest ? 16 : 12,
+                                color: Colors.white,
+                              ),
+                              if (isNearest)
+                                Text(
+                                  '${dist.toStringAsFixed(1)}km',
+                                  style: const TextStyle(
+                                    fontSize: 6,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
+                    );
+                  }).toList(),
+                ),
             ],
           ),
           if (isActive)
@@ -437,6 +508,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
   Widget _buildActiveInfoCard(TripState tripState, bool isDark) {
     final maxFare = 100.0;
     final progress = (tripState.currentFare / maxFare).clamp(0.0, 1.0);
+    final isStopping = tripState.isLoading;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -469,8 +541,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppConstants.successGreen
-                          .withValues(alpha: 0.6),
+                      color: AppConstants.successGreen.withValues(alpha: 0.6),
                       blurRadius: 8,
                     ),
                   ],
@@ -538,6 +609,119 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: GestureDetector(
+              onTap: isStopping
+                  ? null
+                  : () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20)),
+                          title: const Text(
+                            'যাত্রা শেষ করবেন?',
+                            style: TextStyle(fontFamily: AppConstants.fontBengali),
+                          ),
+                          content: Text(
+                            'বর্তমান ভাড়া: ৳${tripState.currentFare.toStringAsFixed(1)}',
+                            style: TextStyle(
+                              fontFamily: AppConstants.fontBengali,
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: Text('না',
+                                  style: TextStyle(
+                                      fontFamily: AppConstants.fontBengali,
+                                      color: Colors.grey[500])),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: Text(
+                                'থামুন',
+                                style: TextStyle(
+                                  fontFamily: AppConstants.fontBengali,
+                                  color: AppConstants.errorRed,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true && mounted) {
+                        HapticFeedback.heavyImpact();
+                        final trip =
+                            await ref.read(tripProvider.notifier).endTrip();
+                        if (trip != null && mounted) {
+                          context.push('/receipt', extra: trip);
+                        }
+                      }
+                    },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isStopping
+                        ? [Colors.grey, Colors.grey.shade400]
+                        : [AppConstants.errorRed, AppConstants.errorRed.withValues(alpha: 0.85)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppConstants.errorRed.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      spreadRadius: -4,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.stop_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isStopping ? 'থামানো হচ্ছে...' : 'থামুন',
+                      style: const TextStyle(
+                        fontFamily: AppConstants.fontBengali,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '৳${tripState.currentFare.toStringAsFixed(1)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -550,7 +734,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
         _currentPosition?.longitude == 90.4125;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: (isDark ? const Color(0xFF1E1E2E) : Colors.white)
             .withValues(alpha: 0.9),
@@ -587,7 +771,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
               Expanded(
                 child: Text(
                   hasLocation && !isDefault
-                      ? 'আপনার অবস্থান'
+                      ? 'কাছের বাস স্টপ'
                       : 'লোকেশন পাওয়া যায়নি',
                   style: TextStyle(
                     fontSize: 16,
@@ -597,19 +781,118 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
                   ),
                 ),
               ),
+              if (_nearbyStops.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppConstants.primaryGreen
+                        .withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${_nearbyStops.length}টি',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: AppConstants.fontBengali,
+                      color: AppConstants.primaryGreen,
+                    ),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 8),
-          if (hasLocation && !isDefault)
-            Text(
-              '${_currentPosition!.latitude.toStringAsFixed(5)}, ${_currentPosition!.longitude.toStringAsFixed(5)}',
-              style: TextStyle(
-                fontSize: 12,
-                fontFamily: AppConstants.fontEnglish,
-                color: Colors.grey[500],
+          if (hasLocation && !isDefault && _nearbyStops.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 120,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _nearbyStops.length.clamp(0, 8),
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  final stop = _nearbyStops[i];
+                  final dist = _calcDistanceKm(
+                      _currentPosition!, LatLng(stop.lat, stop.lng));
+                  final isNearest = i == 0;
+                  return GestureDetector(
+                    onTap: () {
+                      _showStopInfo(stop);
+                      _mapController.move(
+                          LatLng(stop.lat, stop.lng), 16);
+                    },
+                    child: Container(
+                      width: 110,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isNearest
+                            ? AppConstants.primaryGreen
+                                .withValues(alpha: 0.1)
+                            : (isDark
+                                    ? Colors.grey[800]
+                                    : Colors.grey[50])
+                                ?.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isNearest
+                              ? AppConstants.primaryGreen
+                              : Colors.grey.withValues(alpha: 0.2),
+                          width: isNearest ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        mainAxisAlignment:
+                            MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.directions_bus_rounded,
+                            size: 18,
+                            color: isNearest
+                                ? AppConstants.primaryGreen
+                                : Colors.grey[500],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            stop.nameBn,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              fontFamily:
+                                  AppConstants.fontBengali,
+                              color: isNearest
+                                  ? AppConstants.primaryGreen
+                                  : isDark
+                                      ? Colors.white
+                                      : Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${dist.toStringAsFixed(1)} কিমি',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontFamily:
+                                  AppConstants.fontEnglish,
+                              color: isNearest
+                                  ? AppConstants.primaryGreen
+                                      .withValues(alpha: 0.8)
+                                  : Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-            )
-          else
+            ),
+          ],
+          if (!hasLocation || isDefault) ...[
+            const SizedBox(height: 8),
             Text(
               'বাস খুঁজতে উপরের সার্চ ব্যবহার করুন',
               style: TextStyle(
@@ -618,6 +901,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
                 color: Colors.grey[500],
               ),
             ),
+          ],
         ],
       ),
     );
@@ -903,4 +1187,10 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
     final heading = atan2(y, x) * 180 / pi;
     return (heading + 360) % 360;
   }
+}
+
+class _StopWithDistance {
+  final StopCoordinate stop;
+  final double distanceKm;
+  const _StopWithDistance({required this.stop, required this.distanceKm});
 }

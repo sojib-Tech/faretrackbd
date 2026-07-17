@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class BusInfo {
@@ -41,14 +42,18 @@ class BusInfo {
   }
 }
 
+List<BusInfo> _parseBusData(String jsonStr) {
+  final list = jsonDecode(jsonStr) as List;
+  return list.map((e) => BusInfo.fromJson(e as Map<String, dynamic>)).toList();
+}
+
 class BusDatabase {
   static List<BusInfo>? _cachedAll;
 
   static Future<void> initialize() async {
     if (_cachedAll != null) return;
     final jsonStr = await rootBundle.loadString('assets/bus_data.json');
-    final list = jsonDecode(jsonStr) as List;
-    _cachedAll = list.map((e) => BusInfo.fromJson(e as Map<String, dynamic>)).toList();
+    _cachedAll = await compute(_parseBusData, jsonStr);
   }
 
   static List<BusInfo> get allBuses => _cachedAll ?? [];

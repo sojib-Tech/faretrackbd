@@ -1,4 +1,4 @@
-import '../data/bus_route_data.dart';
+﻿import '../data/bus_route_data.dart';
 import '../models/bus_route.dart';
 
 class TransportRagService {
@@ -49,9 +49,9 @@ class TransportRagService {
 
     if (matchedRoutes.isEmpty) return '';
 
-    final buf = StringBuffer('\n📋 প্রাসঙ্গিক রুট তথ্য:\n');
+    final buf = StringBuffer('\n[রুট] প্রাসঙ্গিক রুট তথ্য:\n');
     for (final route in matchedRoutes) {
-      buf.writeln('▸ ${route.routeNo} | ${route.nameBn}');
+      buf.writeln('► ${route.routeNo} | ${route.nameBn}');
       buf.writeln('  দূরত্ব: ${route.totalDistanceKm} কিমি | থামে: ${route.stopCount}টি');
       final stops = route.stops.take(6).map((s) => s.name).join(' → ');
       buf.writeln('  $stops${route.stops.length > 6 ? ' → ...' : ''}');
@@ -66,7 +66,7 @@ class TransportRagService {
           final fare = route.getFare(fromStop, toStop);
           final dist = route.getDistanceBetween(fromStop, toStop);
           if (fare != null) {
-            buf.writeln('  💰 ${areaList[0]}→${areaList[1]}: ${fare.toInt()} টাকা${dist != null ? ' (${dist.toStringAsFixed(1)} কিমি)' : ''}');
+            buf.writeln('  [ভাড়া] ${areaList[0]}→${areaList[1]}: ${fare.toInt()} টাকা${dist != null ? ' (${dist.toStringAsFixed(1)} কিমি)' : ''}');
           }
         }
       }
@@ -106,7 +106,7 @@ class TransportRagService {
         final dist = route.getDistanceBetween(fromIdx, toIdx);
         if (fare != null) {
           results.add(
-            '▸ ${route.routeNo} ${route.nameBn}: $from→$to = ${fare.toInt()} টাকা${dist != null ? ' (${dist.toStringAsFixed(1)} কিমি)' : ''}',
+            '► ${route.routeNo} ${route.nameBn}: $from→$to = ${fare.toInt()} টাকা${dist != null ? ' (${dist.toStringAsFixed(1)} কিমি)' : ''}',
           );
         }
         if (results.length >= 3) break;
@@ -114,6 +114,6 @@ class TransportRagService {
     }
 
     if (results.isEmpty) return '';
-    return '💰 **ভাড়ার তথ্য:**\n${results.join('\n')}\n';
+    return '[ভাড়া] **ভাড়ার তথ্য:**\n${results.join('\n')}\n';
   }
 }

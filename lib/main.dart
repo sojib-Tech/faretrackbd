@@ -220,9 +220,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setPreferredOrientations([
+  unawaited(SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
-  ]);
+  ]));
 
   try {
     await Firebase.initializeApp(
@@ -233,18 +233,8 @@ void main() async {
     rethrow;
   }
 
-  unawaited(ShakeSosService.init().catchError((_) {}));
-
-  await BusDatabase.initialize();
-
-  await GeminiService.init();
-
   final storage = StorageService();
   await storage.init();
-
-  final bgService = BackgroundServiceManager();
-  await bgService.init();
-  await bgService.configureBackgroundService();
 
   runApp(
     ProviderScope(
@@ -254,6 +244,23 @@ void main() async {
       child: const FareTrackApp(),
     ),
   );
+
+  unawaited(_deferredInit());
+}
+
+Future<void> _deferredInit() async {
+  try {
+    await BusDatabase.initialize();
+  } catch (_) {}
+  try {
+    await GeminiService.init();
+  } catch (_) {}
+  try {
+    unawaited(ShakeSosService.init().catchError((_) {}));
+    final bgService = BackgroundServiceManager();
+    await bgService.init();
+    await bgService.configureBackgroundService();
+  } catch (_) {}
 }
 
 class FareTrackApp extends ConsumerStatefulWidget {

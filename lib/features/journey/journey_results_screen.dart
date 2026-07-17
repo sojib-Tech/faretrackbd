@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../models/journey/journey_plan.dart';
-import '../../../models/journey/journey_result.dart';
-import '../../../providers/journey_planner_provider.dart';
-import 'journey_detail_screen.dart';
+import '../../core/constants/app_constants.dart';
+import '../../models/journey/journey_result.dart';
+import '../../providers/journey_planner_provider.dart';
+import 'journey_map_screen.dart';
 
 class JourneyResultsScreen extends ConsumerStatefulWidget {
   const JourneyResultsScreen({super.key});
@@ -19,10 +18,10 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _tabs = [
-    ('সেরা', RoutePreference.recommended),
-    ('দ্রুত', RoutePreference.fastest),
-    ('সস্তা', RoutePreference.cheapest),
-    ('কম হাঁটা', RoutePreference.leastWalking),
+    ('সেরা', 'recommended'),
+    ('দ্রুত', 'fastest'),
+    ('সস্তা', 'cheapest'),
+    ('কম হাঁটা', 'leastWalking'),
   ];
 
   @override
@@ -45,7 +44,7 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
     return Scaffold(
       backgroundColor: isDark ? AppConstants.backgroundDark : AppConstants.paper,
       appBar: AppBar(
-        title: const Text('যাত্রা পরিকল্পনা',
+        title: const Text('বাসের পরামর্শ',
             style: TextStyle(fontFamily: AppConstants.fontBengali)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -87,7 +86,7 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
           Icon(Icons.search_off_rounded, size: 72, color: Colors.grey[400]),
           const SizedBox(height: 12),
           Text(
-            state.error ?? 'কোনো রুট পাওয়া যায়নি',
+            state.error ?? 'কোনো বাস পাওয়া যায়নি',
             style: TextStyle(
               fontSize: 16,
               fontFamily: AppConstants.fontBengali,
@@ -99,21 +98,25 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
     );
   }
 
-  Widget _buildRouteList(List<JourneyResult> allResults, RoutePreference pref, bool isDark) {
+  Widget _buildRouteList(List<JourneyResult> allResults, String pref, bool isDark) {
     List<JourneyResult> filtered;
     switch (pref) {
-      case RoutePreference.fastest:
+      case 'fastest':
         filtered = List.from(allResults)..sort((a, b) => a.totalTimeMinutes.compareTo(b.totalTimeMinutes));
         break;
-      case RoutePreference.cheapest:
+      case 'cheapest':
         filtered = List.from(allResults)..sort((a, b) => a.totalFare.compareTo(b.totalFare));
         break;
-      case RoutePreference.leastWalking:
+      case 'leastWalking':
         filtered = List.from(allResults)..sort((a, b) =>
             a.totalWalkingDistanceMeters.compareTo(b.totalWalkingDistanceMeters));
         break;
       default:
-        filtered = allResults;
+        filtered = List.from(allResults)..sort((a, b) {
+          if (a.isDirect && !b.isDirect) return -1;
+          if (!a.isDirect && b.isDirect) return 1;
+          return a.totalFare.compareTo(b.totalFare);
+        });
     }
 
     if (filtered.isEmpty) {
@@ -131,13 +134,17 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: filtered.length,
-      itemBuilder: (_, i) => _buildOptionCard(filtered[i], i, isDark),
+      itemBuilder: (_, i) => _buildBusSuggestionCard(filtered[i], i, isDark, allResults),
     );
   }
 
-  Widget _buildOptionCard(JourneyResult result, int index, bool isDark) {
+  Widget _buildBusSuggestionCard(JourneyResult result, int index, bool isDark, List<JourneyResult> allResults) {
     final isRecommended = index == 0;
     final cardColor = isDark ? Colors.grey[900]! : Colors.white;
+    final busSegs = result.busSegments;
+    final firstBus = busSegs.isNotEmpty ? busSegs.first : null;
+
+    final suggestions = _getWhySuggested(result, allResults);
 
     return GestureDetector(
       onTap: () {
@@ -145,11 +152,13 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
         ref.read(journeyPlannerProvider.notifier).selectResult(result);
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const JourneyDetailScreen()),
+          MaterialPageRoute(
+            builder: (_) => JourneyMapScreen(result: result),
+          ),
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(18),
@@ -172,202 +181,485 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  if (isRecommended) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppConstants.primaryGreen,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'সেরা',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: AppConstants.fontBengali,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: result.isDirect
-                          ? AppConstants.successGreen.withValues(alpha: 0.12)
-                          : AppConstants.fareAmber.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+              _buildHeader(result, isRecommended, isDark),
+              const SizedBox(height: 10),
+              _buildBusNameRow(firstBus, isDark),
+              if (result.transferCount > 0) ...[
+                const SizedBox(height: 6),
+                _buildTransferInfo(result, isDark),
+              ],
+              const SizedBox(height: 10),
+              _buildRouteWithArrows(result, isDark),
+              const SizedBox(height: 12),
+              _buildInfoGrid(result, isDark),
+              if (suggestions.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _buildWhySuggested(suggestions, isDark),
+              ],
+              const SizedBox(height: 8),
+              _buildBottomActions(result, isDark),
+            ],
+          ),
+        ),
+      ).animate().fadeIn(duration: 300.ms, delay: Duration(milliseconds: index * 80)),
+    );
+  }
+
+  Widget _buildHeader(JourneyResult result, bool isRecommended, bool isDark) {
+    return Row(
+      children: [
+        if (isRecommended) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppConstants.primaryGreen,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'সেরা পরামর্শ',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontFamily: AppConstants.fontBengali,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: result.isDirect
+                ? AppConstants.successGreen.withValues(alpha: 0.12)
+                : AppConstants.fareAmber.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            result.isDirect ? 'সরাসরি বাস' : '${result.transferCount}টি ট্রান্সফার',
+            style: TextStyle(
+              fontSize: 11,
+              fontFamily: AppConstants.fontBengali,
+              color: result.isDirect
+                  ? AppConstants.successGreen
+                  : AppConstants.fareAmber,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: AppConstants.primaryGreen.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '৳${result.totalFare.toStringAsFixed(0)}',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              fontFamily: AppConstants.fontEnglish,
+              color: AppConstants.primaryGreen,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBusNameRow(BusSegment? seg, bool isDark) {
+    if (seg == null) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Icon(
+          seg.isAc ? Icons.ac_unit_rounded : Icons.directions_bus_rounded,
+          size: 18,
+          color: seg.isAc ? AppConstants.primaryAccent : AppConstants.primaryGreen,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            '${seg.busNameBn} (${seg.busNameEn})',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              fontFamily: AppConstants.fontBengali,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+        ),
+        if (seg.isAc)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppConstants.primaryAccent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Text(
+              'AC',
+              style: TextStyle(
+                fontSize: 9,
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTransferInfo(JourneyResult result, bool isDark) {
+    final transfers = result.transferSegments;
+    final busSegs = result.busSegments;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppConstants.fareAmber.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppConstants.fareAmber.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < busSegs.length; i++) ...[
+            Row(
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: AppConstants.fareAmber,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
                     child: Text(
-                      result.isDirect ? 'সরাসরি' : '${result.transferCount}টি সংযোগ',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: AppConstants.fontBengali,
-                        color: result.isDirect
-                            ? AppConstants.successGreen
-                            : AppConstants.fareAmber,
-                        fontWeight: FontWeight.w600,
+                      '${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    'স্কোর: ${result.smartScore.toStringAsFixed(0)}',
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    busSegs[i].busNameBn,
                     style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white54 : AppConstants.inkSoft,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                       fontFamily: AppConstants.fontBengali,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                Text(
+                  '৳${busSegs[i].fare.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppConstants.fareAmber,
+                  ),
+                ),
+              ],
+            ),
+            if (i < transfers.length) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 9),
+                child: Row(
+                  children: [
+                    Container(width: 2, height: 16, color: AppConstants.fareAmber.withValues(alpha: 0.3)),
+                    const SizedBox(width: 8),
+                    Icon(Icons.swap_vert_rounded, size: 12, color: AppConstants.fareAmber),
+                    const SizedBox(width: 4),
+                    Text(
+                      'ট্রান্সফার: ${transfers[i].fromStop}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontFamily: AppConstants.fontBengali,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRouteWithArrows(JourneyResult result, bool isDark) {
+    final stops = <String>[];
+    for (final seg in result.busSegments) {
+      if (stops.isEmpty) {
+        stops.add(seg.boardStop);
+      }
+      stops.add(seg.alightStop);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[850] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'সম্পূর্ণ রুট',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              fontFamily: AppConstants.fontBengali,
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: stops.asMap().entries.map((entry) {
+              final i = entry.key;
+              final stop = entry.value;
+              final isFirst = i == 0;
+              final isLast = i == stops.length - 1;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isFirst
+                          ? AppConstants.primaryGreen.withValues(alpha: 0.15)
+                          : isLast
+                              ? AppConstants.errorRed.withValues(alpha: 0.12)
+                              : AppConstants.primaryAccent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      stop,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: AppConstants.fontBengali,
+                        color: isFirst
+                            ? AppConstants.primaryGreen
+                            : isLast
+                                ? AppConstants.errorRed
+                                : AppConstants.primaryAccent,
+                      ),
+                    ),
+                  ),
+                  if (!isLast)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 2),
+                      child: Icon(Icons.arrow_forward_rounded, size: 10, color: Colors.grey),
+                    ),
+                ],
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoGrid(JourneyResult result, bool isDark) {
+    final firstBus = result.busSegments.isNotEmpty ? result.busSegments.first : null;
+    final boardingStop = firstBus?.boardStop ?? '';
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            _infoChip(Icons.payments_outlined, 'ভাড়া', '৳${result.totalFare.toStringAsFixed(0)}', AppConstants.fareAmber, isDark),
+            const SizedBox(width: 8),
+            _infoChip(Icons.straighten_rounded, 'দূরত্ব', result.totalDistanceFormatted, AppConstants.primaryGreen, isDark),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _infoChip(Icons.directions_bus_rounded, 'মোট স্টপ', '${result.busSegments.fold(0, (s, b) => s + b.stopCount)}', AppConstants.primaryAccent, isDark),
+            const SizedBox(width: 8),
+            _infoChip(Icons.access_time_rounded, 'সময়', result.totalTimeFormatted, AppConstants.primaryGreen, isDark),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            if (boardingStop.isNotEmpty)
+              _infoChip(Icons.location_on_rounded, 'বোর্ডিং', boardingStop, AppConstants.primaryGreen, isDark),
+            if (result.transferCount > 0) ...[
+              const SizedBox(width: 8),
+              _infoChip(Icons.swap_horiz_rounded, 'ট্রান্সফার', '${result.transferCount}বার', AppConstants.fareAmber, isDark),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _infoChip(IconData icon, String label, String value, Color color, bool isDark) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 12, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontFamily: AppConstants.fontBengali,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                fontFamily: AppConstants.fontBengali,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<String> _getWhySuggested(JourneyResult result, List<JourneyResult> allResults) {
+    final suggestions = <String>[];
+
+    if (result.isDirect) {
+      suggestions.add('সরাসরি যাবে');
+    }
+
+    final minFare = allResults.map((r) => r.totalFare).reduce((a, b) => a < b ? a : b);
+    if (result.totalFare == minFare) {
+      suggestions.add('সবচেয়ে কম ভাড়া');
+    }
+
+    final minTime = allResults.map((r) => r.totalTimeMinutes).reduce((a, b) => a < b ? a : b);
+    if (result.totalTimeMinutes == minTime) {
+      suggestions.add('দ্রুততম সময়');
+    }
+
+    final minWalk = allResults.map((r) => r.totalWalkingDistanceMeters).reduce((a, b) => a < b ? a : b);
+    if (result.totalWalkingDistanceMeters == minWalk && minWalk < 500) {
+      suggestions.add('কাছের বাস');
+    }
+
+    final minDist = allResults.map((r) => r.totalDistanceKm).reduce((a, b) => a < b ? a : b);
+    if (result.totalDistanceKm == minDist) {
+      suggestions.add('কম দূরত্ব');
+    }
+
+    if (result.transferCount == 0 && allResults.any((r) => r.transferCount > 0)) {
+      suggestions.add('কোনো ট্রান্সফার নেই');
+    }
+
+    return suggestions;
+  }
+
+  Widget _buildWhySuggested(List<String> suggestions, bool isDark) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: suggestions.map((s) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppConstants.successGreen.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppConstants.successGreen.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle_rounded, size: 12, color: AppConstants.successGreen),
+            const SizedBox(width: 4),
+            Text(
+              s,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                fontFamily: AppConstants.fontBengali,
+                color: AppConstants.successGreen,
+              ),
+            ),
+          ],
+        ),
+      )).toList(),
+    );
+  }
+
+  Widget _buildBottomActions(JourneyResult result, bool isDark) {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              ref.read(journeyPlannerProvider.notifier).selectResult(result);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => JourneyMapScreen(result: result),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppConstants.primaryGreen, AppConstants.pineDeep],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.map_rounded, color: Colors.white, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'মানচিত্রে দেখুন',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: AppConstants.fontBengali,
+                      color: Colors.white,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              _buildRoutePreview(result, isDark),
-              const SizedBox(height: 10),
-              _buildBusNames(result, isDark),
-              const SizedBox(height: 10),
-              _buildStatsRow(result, isDark),
-            ],
+            ),
           ),
         ),
-      ).animate().fadeIn(duration: 300.ms, delay: Duration(milliseconds: index * 100)),
-    );
-  }
-
-  Widget _buildRoutePreview(JourneyResult result, bool isDark) {
-    return Row(
-      children: [
-        _routeDot(AppConstants.fareAmber),
-        ...result.busSegments.asMap().entries.expand((e) => [
-          Expanded(
-            child: Container(
-              height: 2,
-              color: e.value.isAc
-                  ? AppConstants.primaryAccent.withValues(alpha: 0.5)
-                  : AppConstants.primaryGreen.withValues(alpha: 0.5),
-            ),
-          ),
-          if (e.key < result.busSegments.length - 1)
-            Container(
-              width: 8, height: 8,
-              decoration: const BoxDecoration(
-                color: AppConstants.fareAmber,
-                shape: BoxShape.circle,
-              ),
-            ),
-        ]),
-        _routeDot(AppConstants.primaryGreen),
       ],
-    );
-  }
-
-  Widget _routeDot(Color color) {
-    return Container(
-      width: 10, height: 10,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-
-  Widget _buildBusNames(JourneyResult result, bool isDark) {
-    return Wrap(
-      spacing: 6,
-      runSpacing: 4,
-      children: result.busSegments.map((seg) {
-        final isAc = seg.isAc;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: isAc
-                ? AppConstants.primaryAccent.withValues(alpha: 0.12)
-                : AppConstants.primaryGreen.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isAc
-                  ? AppConstants.primaryAccent.withValues(alpha: 0.3)
-                  : AppConstants.primaryGreen.withValues(alpha: 0.2),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isAc ? Icons.ac_unit_rounded : Icons.directions_bus_rounded,
-                size: 14,
-                color: isAc ? AppConstants.primaryAccent : AppConstants.primaryGreen,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                seg.busNameBn,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: AppConstants.fontBengali,
-                  color: isAc ? AppConstants.primaryAccent : AppConstants.primaryGreen,
-                ),
-              ),
-              if (isAc) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: AppConstants.primaryAccent,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'AC',
-                    style: TextStyle(
-                      fontSize: 8,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildStatsRow(JourneyResult result, bool isDark) {
-    return Row(
-      children: [
-        _stat(Icons.access_time_rounded, result.totalTimeFormatted, isDark),
-        _stat(Icons.payments_outlined, '৳${result.totalFare.toStringAsFixed(0)}', isDark),
-        _stat(Icons.directions_walk_rounded,
-            '${result.totalWalkingDistanceMeters.toStringAsFixed(0)}মি', isDark),
-        if (result.transferCount > 0)
-          _stat(Icons.transfer_within_a_station_rounded,
-              '${result.transferCount} সংযোগ', isDark),
-        const Spacer(),
-        Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 20),
-      ],
-    );
-  }
-
-  Widget _stat(IconData icon, String text, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: isDark ? Colors.white54 : AppConstants.inkSoft),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontFamily: AppConstants.fontBengali,
-              color: isDark ? Colors.white70 : AppConstants.ink,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

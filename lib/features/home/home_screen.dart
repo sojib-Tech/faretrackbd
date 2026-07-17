@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_strings.dart';
 import '../../providers/theme_provider.dart';
@@ -60,10 +59,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (tripState.isActive && tripState.currentTrip != null) {
         setState(() {
           _displayElapsed = DateTime.now().difference(tripState.currentTrip!.startTime);
-        });
-      } else {
-        setState(() {
-          _displayElapsed = Duration.zero;
         });
       }
     });
@@ -144,7 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               color: isDark ? AppConstants.primaryAccent : AppConstants.primaryGreen,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Center(child: Text('🚌', style: TextStyle(fontSize: 18))),
+            child: const Center(child: Icon(Icons.directions_bus_rounded, color: Colors.white, size: 18)),
           ),
           const SizedBox(width: 8),
           Text(
@@ -367,7 +362,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               child: Row(
                 children: [
-                  const Text('🔍', style: TextStyle(fontSize: 15)),
+                  Icon(Icons.search_rounded, size: 15, color: AppConstants.inkSoft),
                   const SizedBox(width: 10),
                   Text(
                     'বাস বা লোকেশন খুঁজুন...',
@@ -563,17 +558,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _chip(chipBg, chipColor, '🕐 মিরপুর → মতিঝিল'),
+          _chip(chipBg, chipColor, Icons.access_time_rounded, 'মিরপুর → মতিঝিল'),
           const SizedBox(width: 6),
-          _chip(chipBg, chipColor, '⭐ বাড্ডা লিংক'),
+          _chip(chipBg, chipColor, Icons.star_rounded, 'বাড্ডা লিংক'),
           const SizedBox(width: 6),
-          _chip(chipBg, chipColor, '🕐 উত্তরা → ফার্মগেট'),
+          _chip(chipBg, chipColor, Icons.access_time_rounded, 'উত্তরা → ফার্মগেট'),
         ],
       ),
     );
   }
 
-  Widget _chip(Color bg, Color textColor, String label) {
+  Widget _chip(Color bg, Color textColor, IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
@@ -581,14 +576,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppConstants.cardLine.withValues(alpha: 0.5)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontFamily: AppConstants.fontBengali,
-          color: textColor,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontFamily: AppConstants.fontBengali,
+              color: textColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -657,9 +659,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ],
                       ),
                       child: Center(
-                        child: Text(
-                          '🚌',
-                          style: TextStyle(fontSize: isActive ? 26 : 28),
+                        child: Icon(
+                          Icons.directions_bus_filled_rounded,
+                          size: isActive ? 26 : 28,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -833,6 +836,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 _handleStopTrip();
               } else {
                 ref.read(tripProvider.notifier).startTrip();
+                context.push('/map', extra: <dynamic>[]);
               }
             },
       child: Container(
@@ -864,12 +868,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               builder: (context, _) {
                 return Transform.scale(
                   scale: 0.9 + _pulseController.value * 0.2,
-                  child: Text(
-                    isActive ? '⏹' : '▶',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
+                  child: Icon(
+                    isActive ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                    size: 18,
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 );
               },
@@ -889,9 +891,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ],
         ),
       ),
-    ).animate().shimmer(
-      duration: const Duration(seconds: 2),
-      color: Colors.white.withValues(alpha: 0.08),
     );
   }
 
@@ -988,7 +987,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   children: [
                     Row(
                       children: [
-                        Text('🗺️', style: TextStyle(fontSize: 13)),
+                        Icon(Icons.map_rounded, size: 13, color: isDark ? Colors.white70 : AppConstants.ink),
                         const SizedBox(width: 8),
                         Text(
                           hasRoute
@@ -1020,11 +1019,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   // ── BOTTOM NAV ──
   Widget _buildBottomNav(bool isDark) {
     final items = [
-      ('🏠', 'হোম', 0),
-      ('🕐', 'ইতিহাস', 1),
-      ('🚌', 'যাত্রা', 2),
-      ('🗺️', 'মানচিত্র', 3),
-      ('👤', 'প্রোফাইল', 4),
+      (Icons.home_rounded, 'হোম', 0),
+      (Icons.history_rounded, 'ইতিহাস', 1),
+      (Icons.directions_bus_rounded, 'যাত্রা', 2),
+      (Icons.map_rounded, 'মানচিত্র', 3),
+      (Icons.person_rounded, 'প্রোফাইল', 4),
     ];
 
     return Container(
@@ -1086,16 +1085,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ],
                         ),
                         child: Center(
-                          child: Text(item.$1, style: const TextStyle(fontSize: 20)),
+                          child: Icon(item.$1, size: 20, color: Colors.white),
                         ),
                       )
                     else ...[
-                      Text(item.$1, style: TextStyle(
-                        fontSize: 19,
+                      Icon(item.$1, size: 19,
                         color: isActive
                             ? (isDark ? AppConstants.primaryAccent : AppConstants.primaryGreen)
                             : (isDark ? Colors.white38 : AppConstants.inkSoft),
-                      )),
+                      ),
                       const SizedBox(height: 3),
                       Text(
                         item.$2,

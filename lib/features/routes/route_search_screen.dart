@@ -517,7 +517,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                 if (result.bus.time != null && result.bus.time!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '⏰ ${result.bus.time!}',
+                    '${result.bus.time!}',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[500],
@@ -610,11 +610,9 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                               ),
                             ),
                             if (isFrom)
-                              const Text(' ✓', style: TextStyle(
-                                  fontSize: 10, color: AppConstants.successGreen)),
+                              const Icon(Icons.check, size: 10, color: AppConstants.successGreen),
                             if (isTo)
-                              const Text(' ✓', style: TextStyle(
-                                  fontSize: 10, color: AppConstants.errorRed)),
+                              const Icon(Icons.check, size: 10, color: AppConstants.errorRed),
                           ],
                         ),
                       );

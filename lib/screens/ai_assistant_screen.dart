@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -39,7 +39,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     _initTts();
     _messages.add({
       'role': 'bot',
-      'text': 'আসসালামু আলাইকুম! আমি ট্র্যাকি 🚌\nঢাকার বাসের ভাড়া ও রুট নিয়ে যেকোনো প্রশ্ন করুন।\n\nচ্যাটে লিখুন বা মাইক্রোফোন বাটন ধরে বাংলায় বলুন 🎤',
+      'text': 'আসসালামু আলাইকুম! আমি ট্র্যাকি \nঢাকার বাসের ভাড়া ও রুট নিয়ে যেকোনো প্রশ্ন করুন।\n\nচ্যাটে লিখুন বা মাইক্রোফোন বাটন ধরে বাংলায় বলুন ',
     });
   }
 

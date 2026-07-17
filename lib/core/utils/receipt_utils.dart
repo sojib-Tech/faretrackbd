@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -11,16 +11,16 @@ const _green = PdfColor.fromInt(0xFF1B5E20);
 const _grey = PdfColor.fromInt(0xFF757575);
 
 String buildShareText(TripModel trip) {
-  return '''🧾 FareTrack BD - ভাড়ার রসিদ
+  return '''FareTrack BD - ভাড়ার রসিদ
 
-🚌 ${AppStrings.fareLabel}: ${trip.formattedFare}
-📏 ${AppStrings.distanceLabel}: ${trip.formattedDistance}
-⏱ ${AppStrings.durationLabel}: ${trip.formattedDuration}
-⚠️ ${AppStrings.jamTimeLabel}: ${trip.formattedJamTime}
-⚡ ${AppStrings.avgSpeedLabel}: ${trip.formattedAverageSpeed}
+${AppStrings.fareLabel}: ${trip.formattedFare}
+${AppStrings.distanceLabel}: ${trip.formattedDistance}
+${AppStrings.durationLabel}: ${trip.formattedDuration}
+${AppStrings.jamTimeLabel}: ${trip.formattedJamTime}
+${AppStrings.avgSpeedLabel}: ${trip.formattedAverageSpeed}
 
-📅 ${trip.formattedDate}
-🕐 ${trip.formattedStartTime} - ${trip.formattedEndTime}
+${trip.formattedDate}
+${trip.formattedStartTime} - ${trip.formattedEndTime}
 
 ${AppStrings.tripComplete}!
 FareTrack BD''' ;

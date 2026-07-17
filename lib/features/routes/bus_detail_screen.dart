@@ -51,8 +51,7 @@ class BusDetailScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                   ],
                   if (bus.time != null && bus.time!.isNotEmpty) ...[
-                    _infoChip(
-                        Icons.access_time_rounded, '⏰ ${bus.time!}', isDark),
+                    _infoChip(Icons.access_time_rounded, bus.time!, isDark),
                     const SizedBox(height: 8),
                   ],
                 ],
