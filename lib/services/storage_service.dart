@@ -37,6 +37,10 @@ class StorageService {
     await _prefs?.setBool(_onboardingKey, true);
   }
 
+  Future<void> resetOnboarding() async {
+    await _prefs?.setBool(_onboardingKey, false);
+  }
+
   Future<List<TripModel>> getTrips({String? userId}) async {
     final key = _tripsKeyFor(userId);
     final json = _prefs?.getString(key);

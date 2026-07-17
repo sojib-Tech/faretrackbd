@@ -27,7 +27,8 @@ class FullMapScreen extends ConsumerStatefulWidget {
   ConsumerState<FullMapScreen> createState() => _FullMapScreenState();
 }
 
-class _FullMapScreenState extends ConsumerState<FullMapScreen> {
+class _FullMapScreenState extends ConsumerState<FullMapScreen>
+    with TickerProviderStateMixin {
   late MapController _mapController;
   List<LatLng> _routeLatLngs = [];
   LatLng? _currentPosition;
@@ -36,15 +37,22 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
   final ValueNotifier<LayerHitResult<DhakaZone>?> _zoneHitNotifier =
       ValueNotifier(null);
   Timer? _updateTimer;
+  Timer? _positionTimer;
   Duration _elapsed = Duration.zero;
   bool _initialCenterDone = false;
   List<LatLng> _roadRoutePoints = [];
   List<StopCoordinate> _nearbyStops = [];
+  late AnimationController _stopHoldController;
+  bool _isStopHolding = false;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
+    _stopHoldController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..addStatusListener(_onStopHoldComplete);
 
     if (widget.routePoints != null && widget.routePoints!.isNotEmpty) {
       _routeLatLngs = widget.routePoints!
@@ -66,6 +74,28 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
           setState(() {
             _elapsed = newElapsed;
           });
+        }
+      }
+    });
+
+    _positionTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      final tripState = ref.read(tripProvider);
+      if (tripState.isActive && tripState.routePoints.isNotEmpty) {
+        final newPos = LatLng(
+          tripState.routePoints.last.latitude,
+          tripState.routePoints.last.longitude,
+        );
+        if (_currentPosition == null ||
+            (_currentPosition!.latitude - newPos.latitude).abs() > 0.000005 ||
+            (_currentPosition!.longitude - newPos.longitude).abs() > 0.000005) {
+          setState(() {
+            _currentPosition = newPos;
+            _routeLatLngs = tripState.routePoints
+                .map((p) => LatLng(p.latitude, p.longitude))
+                .toList();
+          });
+          _mapController.move(newPos, _mapController.camera.zoom);
         }
       }
     });
@@ -168,10 +198,90 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
   @override
   void dispose() {
     _updateTimer?.cancel();
+    _positionTimer?.cancel();
     _zoneHitNotifier.removeListener(_onZoneHit);
     _zoneHitNotifier.dispose();
+    _stopHoldController.dispose();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _onStopHoldComplete(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _stopHoldController.reset();
+      setState(() => _isStopHolding = false);
+      HapticFeedback.heavyImpact();
+      _doStopTrip();
+    }
+  }
+
+  void _startStopHold() {
+    if (_isStopHolding) return;
+    final tripState = ref.read(tripProvider);
+    if (tripState.isLoading) return;
+    setState(() => _isStopHolding = true);
+    HapticFeedback.mediumImpact();
+    _stopHoldController.forward(from: 0);
+  }
+
+  void _cancelStopHold() {
+    if (!_isStopHolding) return;
+    _stopHoldController.stop();
+    _stopHoldController.reset();
+    setState(() => _isStopHolding = false);
+  }
+
+  Future<void> _doStopTrip() async {
+    final trip = await ref.read(tripProvider.notifier).endTrip();
+    if (trip != null && mounted) {
+      context.push('/receipt', extra: trip);
+    }
+  }
+
+  void _showStopConfirmDialog(TripState tripState) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'যাত্রা শেষ করবেন?',
+          style: TextStyle(fontFamily: AppConstants.fontBengali),
+        ),
+        content: Text(
+          'বর্তমান ভাড়া: ৳${tripState.currentFare.toStringAsFixed(1)}',
+          style: TextStyle(
+            fontFamily: AppConstants.fontBengali,
+            color: Colors.grey[600],
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('না',
+                style: TextStyle(
+                    fontFamily: AppConstants.fontBengali,
+                    color: Colors.grey[500])),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'থামুন',
+              style: TextStyle(
+                fontFamily: AppConstants.fontBengali,
+                color: AppConstants.errorRed,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      HapticFeedback.heavyImpact();
+      _doStopTrip();
+    }
   }
 
   @override
@@ -613,57 +723,10 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
           SizedBox(
             width: double.infinity,
             child: GestureDetector(
-              onTap: isStopping
-                  ? null
-                  : () async {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                          title: const Text(
-                            'যাত্রা শেষ করবেন?',
-                            style: TextStyle(fontFamily: AppConstants.fontBengali),
-                          ),
-                          content: Text(
-                            'বর্তমান ভাড়া: ৳${tripState.currentFare.toStringAsFixed(1)}',
-                            style: TextStyle(
-                              fontFamily: AppConstants.fontBengali,
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: Text('না',
-                                  style: TextStyle(
-                                      fontFamily: AppConstants.fontBengali,
-                                      color: Colors.grey[500])),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: Text(
-                                'থামুন',
-                                style: TextStyle(
-                                  fontFamily: AppConstants.fontBengali,
-                                  color: AppConstants.errorRed,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirmed == true && mounted) {
-                        HapticFeedback.heavyImpact();
-                        final trip =
-                            await ref.read(tripProvider.notifier).endTrip();
-                        if (trip != null && mounted) {
-                          context.push('/receipt', extra: trip);
-                        }
-                      }
-                    },
+              onLongPressStart: isStopping ? null : (_) => _startStopHold(),
+              onLongPressEnd: isStopping ? null : (_) => _cancelStopHold(),
+              onLongPressCancel: isStopping ? null : () => _cancelStopHold(),
+              onTap: isStopping ? null : () => _showStopConfirmDialog(tripState),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -676,46 +739,78 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen> {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: AppConstants.errorRed.withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      spreadRadius: -4,
+                      color: AppConstants.errorRed.withValues(alpha: _isStopHolding ? 0.7 : 0.4),
+                      blurRadius: _isStopHolding ? 20 : 12,
+                      spreadRadius: _isStopHolding ? -2 : -4,
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Icon(
-                      Icons.stop_rounded,
-                      size: 20,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      isStopping ? 'থামানো হচ্ছে...' : 'থামুন',
-                      style: const TextStyle(
-                        fontFamily: AppConstants.fontBengali,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '৳${tripState.currentFare.toStringAsFixed(1)}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                    if (_isStopHolding)
+                      Positioned.fill(
+                        child: AnimatedBuilder(
+                          animation: _stopHoldController,
+                          builder: (context, _) {
+                            return CustomPaint(
+                              painter: _StopHoldProgressPainter(
+                                progress: _stopHoldController.value,
+                                color: Colors.white.withValues(alpha: 0.15),
+                              ),
+                            );
+                          },
                         ),
                       ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedBuilder(
+                          animation: _isStopHolding ? _stopHoldController : const AlwaysStoppedAnimation(0),
+                          builder: (context, _) {
+                            final scale = _isStopHolding ? 0.85 + _stopHoldController.value * 0.3 : 1.0;
+                            return Transform.scale(
+                              scale: scale,
+                              child: Icon(
+                                Icons.stop_rounded,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isStopping
+                              ? 'থামানো হচ্ছে...'
+                              : _isStopHolding
+                                  ? 'থামুন (${(_stopHoldController.value * 3).toStringAsFixed(0)}s)'
+                                  : 'থামুন',
+                          style: const TextStyle(
+                            fontFamily: AppConstants.fontBengali,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '৳${tripState.currentFare.toStringAsFixed(1)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1193,4 +1288,37 @@ class _StopWithDistance {
   final StopCoordinate stop;
   final double distanceKm;
   const _StopWithDistance({required this.stop, required this.distanceKm});
+}
+
+class _StopHoldProgressPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  _StopHoldProgressPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width < size.height ? size.width : size.height) / 2 - 4;
+    const startAngle = -pi / 2;
+    final sweepAngle = 2 * pi * progress;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _StopHoldProgressPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.color != color;
 }

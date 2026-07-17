@@ -25,12 +25,14 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   Timer? _elapsedTimer;
   Duration _displayElapsed = Duration.zero;
-  int _searchMode = 0; // 0 = single, 1 = route
+  int _searchMode = 0;
   int _bottomNavIndex = 0;
   late AnimationController _pulseController;
+  late AnimationController _holdController;
+  bool _isHolding = false;
 
   @override
   void initState() {
@@ -41,6 +43,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+    _holdController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..addStatusListener(_onHoldComplete);
+  }
+
+  void _onHoldComplete(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      final tripState = ref.read(tripProvider);
+      final isActive = tripState.isActive;
+      _holdController.reset();
+      setState(() => _isHolding = false);
+      HapticFeedback.heavyImpact();
+      if (isActive) {
+        _handleStopTrip();
+      } else {
+        ref.read(tripProvider.notifier).startTrip();
+        context.push('/map', extra: <dynamic>[]);
+      }
+    }
+  }
+
+  void _startHold() {
+    if (_isHolding) return;
+    final tripState = ref.read(tripProvider);
+    if (tripState.isLoading) return;
+    setState(() => _isHolding = true);
+    HapticFeedback.mediumImpact();
+    _holdController.forward(from: 0);
+  }
+
+  void _cancelHold() {
+    if (!_isHolding) return;
+    _holdController.stop();
+    _holdController.reset();
+    setState(() => _isHolding = false);
   }
 
   Future<void> _initSos() async {
@@ -54,7 +92,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void _startElapsedTimer() {
     _elapsedTimer?.cancel();
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        _elapsedTimer?.cancel();
+        return;
+      }
       final tripState = ref.read(tripProvider);
       if (tripState.isActive && tripState.currentTrip != null) {
         setState(() {
@@ -68,6 +109,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void dispose() {
     _elapsedTimer?.cancel();
     _pulseController.dispose();
+    _holdController.dispose();
     super.dispose();
   }
 
@@ -598,103 +640,120 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   // ── LIVE DIAL ──
   Widget _buildDial(bool isDark, TripState tripState, double progress) {
     final isActive = tripState.isActive;
+    final isStopping = tripState.isLoading;
     final dialSize = 230.0;
 
-    return Container(
-      height: dialSize,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Center(
-        child: SizedBox(
-          width: dialSize,
-          height: dialSize,
-          child: CustomPaint(
-            painter: _DialPainter(
-              progress: progress,
-              isActive: isActive,
-              isDark: isDark,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (isActive)
-                  Positioned(
-                    top: 20,
-                    right: 36,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppConstants.successGreen,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppConstants.successGreen.withValues(alpha: 0.6),
-                            blurRadius: 12,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
+    return GestureDetector(
+      onLongPressStart: isStopping ? null : (_) => _startHold(),
+      onLongPressEnd: isStopping ? null : (_) => _cancelHold(),
+      onLongPressCancel: _isHolding ? () => _cancelHold() : null,
+      child: Container(
+        height: dialSize,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _isHolding ? _holdController : const AlwaysStoppedAnimation(0),
+            builder: (context, _) {
+              return SizedBox(
+                width: dialSize,
+                height: dialSize,
+                child: CustomPaint(
+                  painter: _DialPainter(
+                    progress: progress,
+                    isActive: isActive,
+                    isDark: isDark,
+                    holdProgress: _isHolding ? _holdController.value : 0,
+                    holdColor: isActive ? AppConstants.errorRed : AppConstants.primaryGreen,
                   ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? AppConstants.primaryAccent
-                            : AppConstants.primaryGreen,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isActive
-                                    ? AppConstants.primaryAccent
-                                    : AppConstants.primaryGreen)
-                                .withValues(alpha: 0.5),
-                            blurRadius: 18,
-                            spreadRadius: -6,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (isActive)
+                        Positioned(
+                          top: 20,
+                          right: 36,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: AppConstants.successGreen,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppConstants.successGreen.withValues(alpha: 0.6),
+                                  blurRadius: 12,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
                           ),
+                        ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? AppConstants.primaryAccent
+                                  : AppConstants.primaryGreen,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isActive
+                                          ? AppConstants.primaryAccent
+                                          : AppConstants.primaryGreen)
+                                      .withValues(alpha: _isHolding ? 0.8 : 0.5),
+                                  blurRadius: _isHolding ? 26 : 18,
+                                  spreadRadius: _isHolding ? -4 : -6,
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.directions_bus_filled_rounded,
+                                size: isActive ? 26 : 28,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            _isHolding
+                                ? 'ধরে রাখুন...'
+                                : isActive
+                                    ? 'ভাড়া: ৳${tripState.currentFare.toStringAsFixed(1)}'
+                                    : 'যাত্রা শুরু করতে\nধরে রাখুন',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontFamily: AppConstants.fontBengali,
+                              color: _isHolding
+                                  ? (isActive ? AppConstants.errorRed : AppConstants.primaryGreen)
+                                  : (isDark ? Colors.white60 : AppConstants.inkSoft),
+                              fontWeight: _isHolding ? FontWeight.w700 : FontWeight.w500,
+                              height: 1.5,
+                            ),
+                          ),
+                          if (isActive && !_isHolding) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_formatDuration(elapsed: _displayElapsed)} · ${tripState.currentDistance.toStringAsFixed(1)} কিমি',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontFamily: AppConstants.fontBengali,
+                                color: isDark ? Colors.white38 : AppConstants.inkSoft,
+                              ),
+                            ),
+                          ],
                         ],
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.directions_bus_filled_rounded,
-                          size: isActive ? 26 : 28,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      isActive
-                          ? 'ভাড়া: ৳${tripState.currentFare.toStringAsFixed(1)}'
-                          : 'যাত্রা শুরু করতে\nনিচের বাটন চাপুন',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontFamily: AppConstants.fontBengali,
-                        color: isDark ? Colors.white60 : AppConstants.inkSoft,
-                        fontWeight: FontWeight.w500,
-                        height: 1.5,
-                      ),
-                    ),
-                    if (isActive) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '${_formatDuration(elapsed: _displayElapsed)} · ${tripState.currentDistance.toStringAsFixed(1)} কিমি',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: AppConstants.fontBengali,
-                          color: isDark ? Colors.white38 : AppConstants.inkSoft,
-                        ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -828,6 +887,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final isStopping = tripState.isLoading;
 
     return GestureDetector(
+      onLongPressStart: isStopping ? null : (_) => _startHold(),
+      onLongPressEnd: isStopping ? null : (_) => _cancelHold(),
+      onLongPressCancel: isStopping ? null : () => _cancelHold(),
       onTap: isStopping
           ? null
           : () {
@@ -864,10 +926,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedBuilder(
-              animation: _pulseController,
+              animation: _isHolding ? _holdController : _pulseController,
               builder: (context, _) {
+                final scale = _isHolding
+                    ? 0.85 + _holdController.value * 0.3
+                    : 0.9 + _pulseController.value * 0.2;
                 return Transform.scale(
-                  scale: 0.9 + _pulseController.value * 0.2,
+                  scale: scale,
                   child: Icon(
                     isActive ? Icons.stop_rounded : Icons.play_arrow_rounded,
                     size: 18,
@@ -880,7 +945,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Text(
               isStopping
                   ? 'থামানো হচ্ছে...'
-                  : (isActive ? 'যাত্রা শেষ করুন' : 'যাত্রা শুরু করুন'),
+                  : _isHolding
+                      ? (isActive ? 'যাত্রা শেষ করুন (${(_holdController.value * 3).toStringAsFixed(0)}s)' : 'যাত্রা শুরু করুন (${(_holdController.value * 3).toStringAsFixed(0)}s)')
+                      : (isActive ? 'যাত্রা শেষ করুন' : 'যাত্রা শুরু করুন'),
               style: const TextStyle(
                 fontFamily: AppConstants.fontBengali,
                 fontSize: 16.5,
@@ -1123,11 +1190,15 @@ class _DialPainter extends CustomPainter {
   final double progress;
   final bool isActive;
   final bool isDark;
+  final double holdProgress;
+  final Color holdColor;
 
   _DialPainter({
     required this.progress,
     required this.isActive,
     required this.isDark,
+    this.holdProgress = 0,
+    this.holdColor = AppConstants.primaryGreen,
   });
 
   @override
@@ -1183,13 +1254,29 @@ class _DialPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6;
     canvas.drawCircle(center, radius - 3, shadowPaint);
+
+    if (holdProgress > 0) {
+      final holdPaint = Paint()
+        ..color = holdColor.withValues(alpha: 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5
+        ..strokeCap = StrokeCap.round;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius + 2),
+        -math.pi / 2,
+        2 * math.pi * holdProgress,
+        false,
+        holdPaint,
+      );
+    }
   }
 
   @override
   bool shouldRepaint(covariant _DialPainter oldDelegate) =>
       oldDelegate.progress != progress ||
       oldDelegate.isActive != isActive ||
-      oldDelegate.isDark != isDark;
+      oldDelegate.isDark != isDark ||
+      oldDelegate.holdProgress != holdProgress;
 }
 
 // ── MAP PATH CUSTOM PAINTER ──

@@ -49,15 +49,22 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
   }
 
   void _detectLocation() {
-    final loc = ref.read(locationProvider);
-    if (loc.currentPoint != null) {
-      ref.read(journeyPlannerProvider.notifier).setOrigin(
-        loc.currentPoint!.latitude,
-        loc.currentPoint!.longitude,
-        'আমার অবস্থান',
-      );
-      _originController.text = 'আমার অবস্থান';
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final loc = ref.read(locationProvider);
+        if (loc.currentPoint != null) {
+          ref.read(journeyPlannerProvider.notifier).setOrigin(
+            loc.currentPoint!.latitude,
+            loc.currentPoint!.longitude,
+            'আমার অবস্থান',
+          );
+          if (mounted) {
+            _originController.text = 'আমার অবস্থান';
+          }
+        }
+      } catch (_) {}
+    });
   }
 
   @override

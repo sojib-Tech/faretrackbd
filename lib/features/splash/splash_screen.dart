@@ -3,14 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/storage_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/location_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -179,17 +176,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 }
 
-class _LocationCircle extends ConsumerStatefulWidget {
+class _LocationCircle extends StatefulWidget {
   const _LocationCircle();
 
   @override
-  ConsumerState<_LocationCircle> createState() => _LocationCircleState();
+  State<_LocationCircle> createState() => _LocationCircleState();
 }
 
-class _LocationCircleState extends ConsumerState<_LocationCircle>
+class _LocationCircleState extends State<_LocationCircle>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
-  LatLng? _currentPos;
 
   @override
   void initState() {
@@ -198,21 +194,6 @@ class _LocationCircleState extends ConsumerState<_LocationCircle>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _initLocation();
-  }
-
-  Future<void> _initLocation() async {
-    final locationService = ref.read(locationServiceProvider);
-    final hasPermission = await locationService.hasPermissions();
-    if (!hasPermission) {
-      await locationService.requestPermissions();
-    }
-    final point = await locationService.getCurrentLocation();
-    if (point != null && mounted) {
-      setState(() {
-        _currentPos = LatLng(point.latitude, point.longitude);
-      });
-    }
   }
 
   @override
@@ -223,8 +204,6 @@ class _LocationCircleState extends ConsumerState<_LocationCircle>
 
   @override
   Widget build(BuildContext context) {
-    final center = _currentPos ?? const LatLng(23.8103, 90.4125);
-
     return AnimatedBuilder(
       animation: _pulseController,
       builder: (context, child) {
@@ -249,82 +228,82 @@ class _LocationCircleState extends ConsumerState<_LocationCircle>
               ],
             ),
             child: ClipOval(
-              child: Stack(
-                children: [
-                  FlutterMap(
-                    options: MapOptions(
-                      initialCenter: center,
-                      initialZoom: 14,
-                      interactionOptions: const InteractionOptions(
-                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                      ),
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: AppConstants.tileUrl,
-                        userAgentPackageName: 'com.faretrackbd.app',
-                      ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: center,
-                            width: 20,
-                            height: 20,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2.5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.blue.withValues(alpha: 0.5),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.08),
+                      AppConstants.primaryGreen.withValues(alpha: 0.15),
                     ],
                   ),
-                  Positioned(
-                    bottom: 4,
-                    right: 4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(8),
+                        shape: BoxShape.circle,
+                        color: AppConstants.primaryGreen.withValues(alpha: 0.1),
+                        border: Border.all(
+                          color: AppConstants.primaryGreen.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 5,
-                            height: 5,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            'আপনার অবস্থান',
-                            style: TextStyle(
-                              fontSize: 7,
-                              color: Colors.white,
-                              fontFamily: AppConstants.fontBengali,
-                            ),
+                    ),
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withValues(alpha: 0.5),
+                            blurRadius: 8,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                    Positioned(
+                      bottom: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'আপনার অবস্থান',
+                              style: TextStyle(
+                                fontSize: 7,
+                                color: Colors.white,
+                                fontFamily: AppConstants.fontBengali,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
