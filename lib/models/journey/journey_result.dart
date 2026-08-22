@@ -1,5 +1,6 @@
 import '../bus_route.dart';
 import 'journey_plan.dart';
+import '../../core/constants/app_constants.dart';
 export 'journey_plan.dart' show WalkDirection, TrafficLevel, JourneyStepType;
 
 sealed class JourneySegment {
@@ -167,14 +168,14 @@ class JourneyResult {
   String get totalTimeFormatted {
     final h = totalTimeMinutes.floor() ~/ 60;
     final m = totalTimeMinutes.floor() % 60;
-    if (h > 0) return '$hঘ $mমি';
-    return '$mমি';
+    if (h > 0) return '${AppConstants.toBanglaNum("$h")}ঘ ${AppConstants.toBanglaNum("$m")}মি';
+    return '${AppConstants.toBanglaNum("$m")}মি';
   }
 
   String get totalDistanceFormatted {
     final km = totalDistanceKm;
-    if (km < 1) return '${(km * 1000).toStringAsFixed(0)}মি';
-    return '${km.toStringAsFixed(1)} কিমি';
+    if (km < 1) return '${AppConstants.toBanglaNumFromDouble(km * 1000, decimals: 0)}মি';
+    return '${AppConstants.toBanglaNumFromDouble(km, decimals: 1)} কিমি';
   }
 
   List<JourneyStep> get steps {

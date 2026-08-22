@@ -48,4 +48,47 @@ class AppConstants {
   static const Color successGreen = Color(0xFF27AE60);
   static const Color backgroundLight = Color(0xFFF4F6F5);
   static const Color backgroundDark = Color(0xFF121212);
+
+  static const double journeySearchRadiusMeters = 1500.0;
+  static const double journeyTransferMaxWalkMeters = 500.0;
+  static const double journeyWalkingSpeedKmh = 5.0;
+  static const double journeyBusSpeedKmh = 20.0;
+  static const int journeyMaxCandidates = 15;
+  static const int journeyMaxNearbyStops = 10;
+  static const double walkOnlyThresholdMeters = 400.0;
+  static const double walkOnlySpeedKmh = 5.0;
+
+  static const double scoreTimeWeight = 0.40;
+  static const double scoreFareWeight = 0.30;
+  static const double scoreWalkWeight = 0.30;
+
+  static String toBanglaNum(String input) {
+    const bangla = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+    return input.split('').map((c) {
+      final d = int.tryParse(c);
+      return d != null ? bangla[d] : c;
+    }).join();
+  }
+
+  static String toBanglaNumFromDouble(double value, {int decimals = 0}) {
+    return toBanglaNum(value.toStringAsFixed(decimals));
+  }
+
+  static String formatDistanceMeters(double meters) {
+    if (meters >= 1000) {
+      return '${toBanglaNumFromDouble(meters / 1000, decimals: 1)} কিমি';
+    }
+    return '${toBanglaNumFromDouble(meters, decimals: 0)}মি';
+  }
+
+  static String formatTimeMinutes(double minutes) {
+    final h = minutes.floor() ~/ 60;
+    final m = minutes.floor() % 60;
+    if (h > 0) return '${toBanglaNum('$h')}ঘ ${toBanglaNum('$m')}মি';
+    return '${toBanglaNum('$m')}মি';
+  }
+
+  static String formatFare(double fare) {
+    return '৳${toBanglaNumFromDouble(fare, decimals: 0)}';
+  }
 }

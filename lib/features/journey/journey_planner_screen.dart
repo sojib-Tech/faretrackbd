@@ -170,6 +170,11 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                           hint: 'শুরুর স্থান',
                           isDark: isDark,
                           onChanged: _onOriginSearch,
+                          trailing: _buildFieldIcon(
+                            Icons.my_location_rounded,
+                            onTap: _useCurrentLocation,
+                            color: AppConstants.fareAmber,
+                          ),
                         ),
                         Divider(height: 1, color: isDark ? Colors.white12 : AppConstants.cardLine),
                         _buildField(
@@ -178,6 +183,11 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                           isDark: isDark,
                           focusNode: _destFocus,
                           onChanged: _onDestSearch,
+                          trailing: _buildFieldIcon(
+                            Icons.place_rounded,
+                            onTap: null,
+                            color: AppConstants.primaryGreen,
+                          ),
                         ),
                       ],
                     ),
@@ -219,7 +229,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                     Expanded(
                       child: Text(
                         state.error!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontFamily: AppConstants.fontBengali,
                           color: AppConstants.warn,
@@ -238,33 +248,51 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
     );
   }
 
+  Widget _buildFieldIcon(IconData icon, {VoidCallback? onTap, required Color color}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        child: Icon(icon, size: 18, color: color),
+      ),
+    );
+  }
+
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
     required bool isDark,
     required ValueChanged<String> onChanged,
     FocusNode? focusNode,
+    Widget? trailing,
   }) {
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      onChanged: onChanged,
-      style: TextStyle(
-        fontSize: 14,
-        fontFamily: AppConstants.fontBengali,
-        color: isDark ? Colors.white : AppConstants.ink,
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(
-          fontSize: 14,
-          fontFamily: AppConstants.fontBengali,
-          color: AppConstants.inkSoft,
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            onChanged: onChanged,
+            style: TextStyle(
+              fontSize: 14,
+              fontFamily: AppConstants.fontBengali,
+              color: isDark ? Colors.white : AppConstants.ink,
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(
+                fontSize: 14,
+                fontFamily: AppConstants.fontBengali,
+                color: AppConstants.inkSoft,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              isDense: true,
+            ),
+          ),
         ),
-        border: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(vertical: 10),
-        isDense: true,
-      ),
+        ?trailing,
+      ],
     );
   }
 
@@ -293,11 +321,12 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
   }
 
   Widget _buildSearchButton(JourneyPlannerState state) {
+    final canSearch = state.originLat != null && state.destName.isNotEmpty;
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: ElevatedButton.icon(
-        onPressed: state.isLoading ? null : _planJourney,
+        onPressed: (state.isLoading || !canSearch) ? null : _planJourney,
         icon: state.isLoading
             ? const SizedBox(width: 20, height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -309,6 +338,9 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppConstants.primaryGreen,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: canSearch
+              ? AppConstants.primaryGreen
+              : AppConstants.primaryGreen.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
@@ -411,13 +443,14 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
   }
 
   Widget _buildNearbyStops(JourneyPlannerState state, bool isDark) {
+    final shownStops = state.nearbyStops.take(AppConstants.journeyMaxNearbyStops).toList();
     return ListView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          'কাছের বাস স্টপ (${state.nearbyStops.length}টি)',
+          'কাছের বাস স্টপ (${AppConstants.toBanglaNum("${shownStops.length}")}টি)',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -426,7 +459,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        ...state.nearbyStops.take(8).map((stop) => _buildNearbyStopTile(stop, isDark)),
+        ...shownStops.map((stop) => _buildNearbyStopTile(stop, isDark)),
       ],
     );
   }
@@ -475,7 +508,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${stop.distanceMeters.toStringAsFixed(0)}মি',
+                AppConstants.formatDistanceMeters(stop.distanceMeters),
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -483,7 +516,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                 ),
               ),
               Text(
-                '${stop.walkingTimeMinutes.toStringAsFixed(0)} মিনিট হাঁটা',
+                '${AppConstants.toBanglaNumFromDouble(stop.walkingTimeMinutes, decimals: 0)} মিনিট হাঁটা',
                 style: TextStyle(fontSize: 10, color: Colors.grey[500]),
               ),
             ],
@@ -522,6 +555,30 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
     }
     ref.read(journeyPlannerProvider.notifier).clearSearch();
     setState(() => _searchMode = 'none');
+  }
+
+  void _useCurrentLocation() {
+    final loc = ref.read(locationProvider);
+    if (loc.currentPoint != null) {
+      ref.read(journeyPlannerProvider.notifier).setOrigin(
+        loc.currentPoint!.latitude,
+        loc.currentPoint!.longitude,
+        'আমার অবস্থান',
+      );
+      _originController.text = 'আমার অবস্থান';
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'GPS সিগন্যাল পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।',
+            style: TextStyle(fontFamily: AppConstants.fontBengali),
+          ),
+          backgroundColor: AppConstants.warn,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
 
   void _swap() {

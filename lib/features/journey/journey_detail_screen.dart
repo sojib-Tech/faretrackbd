@@ -97,7 +97,7 @@ class JourneyDetailScreen extends ConsumerWidget {
               ),
               const Spacer(),
               Text(
-                'স্কোর: ${result.smartScore.toStringAsFixed(0)}/100',
+                'স্কোর: ${AppConstants.toBanglaNumFromDouble(result.smartScore, decimals: 0)}/১০০',
                 style: const TextStyle(
                   fontSize: 12,
                   color: Colors.white70,
@@ -111,12 +111,12 @@ class JourneyDetailScreen extends ConsumerWidget {
             children: [
               _summaryStat(Icons.access_time_rounded, 'সময়', result.totalTimeFormatted),
               const SizedBox(width: 20),
-              _summaryStat(Icons.payments_outlined, 'ভাড়া', '৳${result.totalFare.toStringAsFixed(0)}'),
+              _summaryStat(Icons.payments_outlined, 'ভাড়া', AppConstants.formatFare(result.totalFare)),
               const SizedBox(width: 20),
               _summaryStat(Icons.straighten_rounded, 'দূরত্ব', result.totalDistanceFormatted),
               const SizedBox(width: 20),
               _summaryStat(Icons.directions_walk_rounded, 'হাঁটা',
-                  '${result.totalWalkingDistanceMeters.toStringAsFixed(0)}মি'),
+                  AppConstants.formatDistanceMeters(result.totalWalkingDistanceMeters)),
             ],
           ),
           const SizedBox(height: 16),
@@ -307,7 +307,7 @@ class JourneyDetailScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'হাঁটুন ${walk.distanceMeters.toStringAsFixed(0)}মি',
+                  'হাঁটুন ${AppConstants.formatDistanceMeters(walk.distanceMeters)}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -315,7 +315,7 @@ class JourneyDetailScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  '${walk.fromLabel} → ${walk.toLabel} · ${walk.directionLabel} · ~${walk.durationMinutes.toStringAsFixed(0)} মিনিট',
+                  '${walk.fromLabel} → ${walk.toLabel} · ${walk.directionLabel} · ~${AppConstants.toBanglaNumFromDouble(walk.durationMinutes, decimals: 0)} মিনিট',
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey[500],
@@ -403,11 +403,11 @@ class JourneyDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(left: 28),
             child: Row(
               children: [
-                _chipTag('${step.stopCount ?? 0} স্টপ',
+                _chipTag('${AppConstants.toBanglaNum("${step.stopCount ?? 0}")} স্টপ',
                     AppConstants.primaryAccent, isDark),
                 const SizedBox(width: 8),
                 if (step.fare != null)
-                  _chipTag('৳${step.fare!.toStringAsFixed(0)}',
+                  _chipTag(AppConstants.formatFare(step.fare!),
                       AppConstants.fareAmber, isDark),
                 if (step.isAc) ...[
                   const SizedBox(width: 8),
@@ -538,7 +538,7 @@ class JourneyDetailScreen extends ConsumerWidget {
             child: Row(
               children: [
                 Text(
-                  'বাস ${e.key + 1}: ${e.value.busNameBn}',
+                  'বাস ${AppConstants.toBanglaNum("${e.key + 1}")}: ${e.value.busNameBn}',
                   style: TextStyle(
                     fontSize: 13,
                     fontFamily: AppConstants.fontBengali,
@@ -547,7 +547,7 @@ class JourneyDetailScreen extends ConsumerWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '৳${e.value.fare.toStringAsFixed(0)}',
+                  AppConstants.formatFare(e.value.fare),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -571,7 +571,7 @@ class JourneyDetailScreen extends ConsumerWidget {
               ),
               const Spacer(),
               Text(
-                '৳${result.totalFare.toStringAsFixed(0)}',
+                AppConstants.formatFare(result.totalFare),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -644,7 +644,7 @@ class JourneyDetailScreen extends ConsumerWidget {
           ),
           const Spacer(),
           Text(
-            'গাড়ির গতি: ~${(20 * traffic.multiplier).toStringAsFixed(0)} কিমি/ঘ',
+            'গাড়ির গতি: ~${AppConstants.toBanglaNumFromDouble(20 * traffic.multiplier, decimals: 0)} কিমি/ঘ',
             style: TextStyle(
               fontSize: 11,
               fontFamily: AppConstants.fontBengali,

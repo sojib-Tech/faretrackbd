@@ -1,10 +1,15 @@
+import 'dart:math';
+import '../core/constants/app_constants.dart';
 import '../core/utils/fare_calculator.dart';
 import '../data/bus_route_data.dart';
+import '../data/dhaka_bus_route_data.dart';
 import '../data/stop_coordinates.dart';
 import '../models/bus_route.dart';
 import '../models/journey/journey_plan.dart';
 import '../models/journey/journey_result.dart';
+import '../models/journey/stop_coordinate.dart';
 import '../services/eta_service.dart';
+import '../services/journey_planner_engine.dart';
 import '../services/nearest_stop_service.dart';
 import '../services/scoring_service.dart';
 
@@ -12,9 +17,11 @@ class JourneyEngine {
   JourneyEngine._();
 
   static final Map<String, List<_RouteStopInfo>> _stopToRoutes = {};
+  static bool _indexBuilt = false;
 
-  static void _buildIndex() {
-    if (_stopToRoutes.isNotEmpty) return;
+  static Future<void> _buildIndex() async {
+    if (_indexBuilt) return;
+    _indexBuilt = true;
     _stopToRoutes.clear();
 
     for (final route in BusRouteData.allRoutes) {
@@ -31,6 +38,56 @@ class JourneyEngine {
         }
       }
     }
+
+    final jsonBuses = await DhakaBusRouteData.load();
+    for (final bus in jsonBuses) {
+      if (bus.route.length < 2) continue;
+      final jsonRoute = _JsonBusRouteAdapter.fromJson(bus);
+      if (_jsonRouteIndexed(jsonRoute.nameEn)) continue;
+      for (var i = 0; i < jsonRoute.stops.length; i++) {
+        final rawName = jsonRoute.stops[i].name;
+        final info = _RouteStopInfo(route: jsonRoute, index: i);
+        _stopToRoutes.putIfAbsent(rawName, () => []).add(info);
+        final coord = DhakaBusRouteData.findStop(rawName);
+        if (coord != null) {
+          _stopToRoutes.putIfAbsent(coord.name, () => []).add(info);
+          if (coord.nameBn != rawName) {
+            _stopToRoutes.putIfAbsent(coord.nameBn, () => []).add(info);
+          }
+        }
+      }
+    }
+  }
+
+  static bool _jsonRouteIndexed(String nameEn) {
+    for (final entries in _stopToRoutes.values) {
+      for (final info in entries) {
+        if (info.route.nameEn == nameEn) return true;
+      }
+    }
+    return false;
+  }
+
+  static double _haversine(double lat1, double lng1, double lat2, double lng2) {
+    const earthRadius = 6371000.0;
+    final dLat = (lat2 - lat1) * pi / 180.0;
+    final dLng = (lng2 - lng1) * pi / 180.0;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180.0) * cos(lat2 * pi / 180.0) *
+        sin(dLng / 2) * sin(dLng / 2);
+    return earthRadius * 2 * atan2(sqrt(a), sqrt(1 - a));
+  }
+
+  static String _getWalkDirectionLabel(double lat1, double lng1, double lat2, double lng2) {
+    final angle = atan2(lng2 - lng1, lat2 - lat1) * 180 / pi;
+    if (angle >= -22.5 && angle < 22.5) return 'উত্তর';
+    if (angle >= 22.5 && angle < 67.5) return 'উত্তর-পূর্ব';
+    if (angle >= 67.5 && angle < 112.5) return 'পূর্ব';
+    if (angle >= 112.5 && angle < 157.5) return 'দক্ষিণ-পূর্ব';
+    if (angle >= 157.5 || angle < -157.5) return 'দক্ষিণ';
+    if (angle >= -157.5 && angle < -112.5) return 'দক্ষিণ-পশ্চিম';
+    if (angle >= -112.5 && angle < -67.5) return 'পশ্চিম';
+    return 'উত্তর-পশ্চিম';
   }
 
   static BusSegment? _createBusSegment(
@@ -125,32 +182,169 @@ class JourneyEngine {
     return na == nb;
   }
 
-  static List<JourneyResult> findRoutes({
+  static bool _isDuplicate(List<JourneyResult> existing, JourneyResult candidate) {
+    for (final e in existing) {
+      if (e.busSegments.length != candidate.busSegments.length) continue;
+      if (e.transferCount != candidate.transferCount) continue;
+      final eSig = e.busSegments.map((s) => '${s.busNameEn}|${s.boardStop}-${s.alightStop}').join(', ');
+      final cSig = candidate.busSegments.map((s) => '${s.busNameEn}|${s.boardStop}-${s.alightStop}').join(', ');
+      if (eSig == cSig) return true;
+    }
+    return false;
+  }
+
+  static Future<List<JourneyResult>> findRoutes({
     required double originLat,
     required double originLng,
     required double destLat,
     required double destLng,
     required String originName,
     required String destName,
-  }) {
-    _buildIndex();
+  }) async {
+    await _buildIndex();
+
+    final directDistance = _haversine(originLat, originLng, destLat, destLng);
+
+    final walkOnlyTime = directDistance / 1000.0 / AppConstants.walkOnlySpeedKmh * 60.0;
 
     final nearbyOrigin = NearestStopService.findNearby(
       latitude: originLat,
       longitude: originLng,
-      radiusMeters: 1500,
+      radiusMeters: AppConstants.journeySearchRadiusMeters,
     );
 
     final nearbyDest = NearestStopService.findNearby(
       latitude: destLat,
       longitude: destLng,
-      radiusMeters: 1500,
+      radiusMeters: AppConstants.journeySearchRadiusMeters,
     );
-
-    if (nearbyOrigin.isEmpty || nearbyDest.isEmpty) return [];
 
     final results = <JourneyResult>[];
     var planId = 0;
+
+    if (directDistance <= AppConstants.walkOnlyThresholdMeters) {
+      final walkDir = _getWalkDirectionLabel(originLat, originLng, destLat, destLng);
+      final walkSeg = _createWalkSegment(
+        distanceMeters: directDistance,
+        walkingTimeMinutes: walkOnlyTime,
+        directionLabel: walkDir,
+        fromLabel: originName,
+        toLabel: destName,
+      );
+      results.add(JourneyResult(
+        id: 'plan_${++planId}',
+        originName: originName,
+        destName: destName,
+        segments: [walkSeg],
+        smartScore: 100,
+      ));
+      return results;
+    }
+
+    if (nearbyOrigin.isEmpty || nearbyDest.isEmpty) {
+      return _buildWalkOnlyResult(
+        originLat, originLng, destLat, destLng,
+        originName, destName, directDistance, walkOnlyTime,
+        planId,
+      );
+    }
+
+    final busResults = _findDirectRoutes(
+      nearbyOrigin, nearbyDest, originName, destName, planId,
+    );
+    planId += busResults.length;
+    results.addAll(busResults);
+
+    final transferResults = _findTransferRoutes(
+      nearbyOrigin: nearbyOrigin.take(3).toList(),
+      nearbyDest: nearbyDest.take(3).toList(),
+      originName: originName,
+      destName: destName,
+      planIdStart: planId,
+    );
+    planId += transferResults.length;
+    results.addAll(transferResults);
+
+    if (results.isEmpty) {
+      return _buildWalkOnlyResult(
+        originLat, originLng, destLat, destLng,
+        originName, destName, directDistance, walkOnlyTime,
+        planId,
+      );
+    }
+
+    final busTimeBest = results
+        .map((r) => r.totalTimeMinutes)
+        .reduce((a, b) => a < b ? a : b);
+
+    if (walkOnlyTime < busTimeBest) {
+      final walkDir = _getWalkDirectionLabel(originLat, originLng, destLat, destLng);
+      final walkSeg = _createWalkSegment(
+        distanceMeters: directDistance,
+        walkingTimeMinutes: walkOnlyTime,
+        directionLabel: walkDir,
+        fromLabel: originName,
+        toLabel: destName,
+      );
+      results.insert(0, JourneyResult(
+        id: 'plan_${++planId}',
+        originName: originName,
+        destName: destName,
+        segments: [walkSeg],
+        smartScore: 0,
+      ));
+    }
+
+    final deduped = <JourneyResult>[];
+    for (final r in results) {
+      if (!_isDuplicate(deduped, r)) {
+        deduped.add(r);
+      }
+    }
+
+    final ranked = ScoringService.rankResults(deduped);
+    final capped = ranked.take(AppConstants.journeyMaxCandidates).toList();
+
+    for (final r in capped) {
+      r.debugLog();
+    }
+    return capped;
+  }
+
+  static List<JourneyResult> _buildWalkOnlyResult(
+    double originLat, double originLng,
+    double destLat, double destLng,
+    String originName, String destName,
+    double distance, double walkTime,
+    int planId,
+  ) {
+    final walkDir = _getWalkDirectionLabel(originLat, originLng, destLat, destLng);
+    final walkSeg = _createWalkSegment(
+      distanceMeters: distance,
+      walkingTimeMinutes: walkTime,
+      directionLabel: walkDir,
+      fromLabel: originName,
+      toLabel: destName,
+    );
+    final result = JourneyResult(
+      id: 'plan_${++planId}',
+      originName: originName,
+      destName: destName,
+      segments: [walkSeg],
+      smartScore: 0,
+    );
+    return [result];
+  }
+
+  static List<JourneyResult> _findDirectRoutes(
+    List<NearbyStop> nearbyOrigin,
+    List<NearbyStop> nearbyDest,
+    String originName,
+    String destName,
+    int planIdStart,
+  ) {
+    final results = <JourneyResult>[];
+    var planId = planIdStart;
 
     for (final origStop in nearbyOrigin.take(5)) {
       for (final destStop in nearbyDest.take(5)) {
@@ -162,11 +356,15 @@ class JourneyEngine {
         for (final origInfo in origRoutes) {
           for (final destInfo in destRoutes) {
             if (origInfo.route.id == destInfo.route.id &&
-                origInfo.index < destInfo.index) {
+                origInfo.index != destInfo.index) {
+              final boardIdx = origInfo.index < destInfo.index
+                  ? origInfo.index : destInfo.index;
+              final alightIdx = origInfo.index < destInfo.index
+                  ? destInfo.index : origInfo.index;
               final busSeg = _createBusSegment(
                 origInfo.route,
-                origInfo.index,
-                destInfo.index,
+                boardIdx,
+                alightIdx,
               );
               if (busSeg == null) continue;
 
@@ -200,21 +398,7 @@ class JourneyEngine {
       }
     }
 
-    if (results.isEmpty) {
-      results.addAll(_findTransferRoutes(
-        nearbyOrigin: nearbyOrigin.take(3).toList(),
-        nearbyDest: nearbyDest.take(3).toList(),
-        originName: originName,
-        destName: destName,
-        planIdStart: planId,
-      ));
-    }
-
-    final ranked = ScoringService.rankResults(results);
-    for (final r in ranked) {
-      r.debugLog();
-    }
-    return ranked;
+    return results;
   }
 
   static List<JourneyResult> _findTransferRoutes({
@@ -245,6 +429,22 @@ class JourneyEngine {
               destInfo.index,
             );
             if (commonStop == null) continue;
+
+            final transferFromCoord = StopCoordinates.find(
+              origInfo.route.stops[commonStop.index1].name,
+            );
+            final transferToCoord = StopCoordinates.find(
+              destInfo.route.stops[commonStop.index2].name,
+            );
+            if (transferFromCoord != null && transferToCoord != null) {
+              final transferWalkDist = _haversine(
+                transferFromCoord.lat, transferFromCoord.lng,
+                transferToCoord.lat, transferToCoord.lng,
+              );
+              if (transferWalkDist > AppConstants.journeyTransferMaxWalkMeters) {
+                continue;
+              }
+            }
 
             final busSeg1 = _createBusSegment(
               origInfo.route,
@@ -297,15 +497,15 @@ class JourneyEngine {
     return results;
   }
 
-  static List<JourneyResult> planFromText({
+  static Future<List<JourneyResult>> planFromText({
     required String originText,
     required String destText,
     required double? userLat,
     required double? userLng,
     double? destLat,
     double? destLng,
-  }) {
-    _buildIndex();
+  }) async {
+    await _buildIndex();
     final originCoord = StopCoordinates.find(originText);
     final destCoord = StopCoordinates.find(destText);
 
@@ -337,7 +537,7 @@ class JourneyEngine {
       return [];
     }
 
-    return findRoutes(
+    return await findRoutes(
       originLat: originLatitude,
       originLng: originLongitude,
       destLat: destLatitude,
@@ -418,4 +618,67 @@ class _CommonStop {
   final int index2;
 
   const _CommonStop({required this.index1, required this.index2});
+}
+
+class _JsonBusRouteAdapter extends BusRoute {
+  _JsonBusRouteAdapter._({
+    required super.id,
+    required super.nameBn,
+    required super.nameEn,
+    required super.routeNo,
+    required super.totalDistanceKm,
+    required super.stops,
+    required super.fareData,
+  });
+
+  static BusRoute fromJson(DhakaBusRoute json) {
+    final resolved = <_ResolvedCoord>[];
+    double cumulative = 0;
+    for (final name in json.route) {
+      final coord = DhakaBusRouteData.findStop(name);
+      if (coord != null && resolved.isNotEmpty) {
+        final prev = resolved.last.coord;
+        if (prev != null) {
+          cumulative += JourneyPlannerEngine.haversine(
+            prev.lat, prev.lng, coord.lat, coord.lng,
+          ) / 1000.0;
+        }
+      }
+      resolved.add(_ResolvedCoord(coord: coord, cumDist: cumulative));
+    }
+
+    final stops = json.route.asMap().entries.map((e) {
+      return BusStop(
+        name: e.value,
+        distanceFromStartKm: resolved[e.key].cumDist,
+      );
+    }).toList();
+
+    final n = stops.length;
+    final fareData = <List<double>>[];
+    for (var i = 0; i < n; i++) {
+      final row = <double>[];
+      for (var j = 0; j < i; j++) {
+        final dist = (resolved[i].cumDist - resolved[j].cumDist).abs();
+        row.add(calculateDhakaBusFare(dist).toDouble());
+      }
+      fareData.add(row);
+    }
+
+    return _JsonBusRouteAdapter._(
+      id: 'json_${json.nameEn}',
+      nameBn: json.nameBn,
+      nameEn: json.nameEn,
+      routeNo: '',
+      totalDistanceKm: cumulative,
+      stops: stops,
+      fareData: fareData,
+    );
+  }
+}
+
+class _ResolvedCoord {
+  final StopCoordinate? coord;
+  final double cumDist;
+  const _ResolvedCoord({this.coord, this.cumDist = 0});
 }

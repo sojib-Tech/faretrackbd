@@ -1,4 +1,5 @@
 import '../bus_route.dart';
+import '../../core/constants/app_constants.dart';
 
 enum WalkDirection { north, south, east, west, northeast, northwest, southeast, southwest }
 
@@ -205,7 +206,7 @@ class JourneyPlan {
   String get totalETAFormatted {
     final h = totalETA.floor() ~/ 60;
     final m = totalETA.floor() % 60;
-    if (h > 0) return '$hঘ $mমি';
-    return '$mমি';
+    if (h > 0) return '${AppConstants.toBanglaNum("$h")}ঘ ${AppConstants.toBanglaNum("$m")}মি';
+    return '${AppConstants.toBanglaNum("$m")}মি';
   }
 }

@@ -20,6 +20,7 @@ class JourneyPlannerState {
   final bool hasSearched;
   final String? error;
   final TrafficInfo trafficInfo;
+  final bool isWalkOnly;
 
   const JourneyPlannerState({
     this.originLat,
@@ -40,6 +41,7 @@ class JourneyPlannerState {
       multiplier: 1.2,
       labelBn: 'মাঝারি ট্রাফিক',
     ),
+    this.isWalkOnly = false,
   });
 
   JourneyPlannerState copyWith({
@@ -60,6 +62,7 @@ class JourneyPlannerState {
     bool clearError = false,
     bool clearDestCoords = false,
     TrafficInfo? trafficInfo,
+    bool? isWalkOnly,
   }) {
     return JourneyPlannerState(
       originLat: originLat ?? this.originLat,
@@ -76,6 +79,7 @@ class JourneyPlannerState {
       hasSearched: hasSearched ?? this.hasSearched,
       error: clearError ? null : (error ?? this.error),
       trafficInfo: trafficInfo ?? this.trafficInfo,
+      isWalkOnly: isWalkOnly ?? this.isWalkOnly,
     );
   }
 }
@@ -86,6 +90,10 @@ class JourneyPlannerNotifier extends StateNotifier<JourneyPlannerState> {
   void setOrigin(double lat, double lng, String name) {
     state = state.copyWith(originLat: lat, originLng: lng, originName: name);
     _loadNearbyStops(lat, lng);
+  }
+
+  void setDestCoords(double lat, double lng) {
+    state = state.copyWith(destLat: lat, destLng: lng);
   }
 
   void _loadNearbyStops(double lat, double lng) {
@@ -119,7 +127,29 @@ class JourneyPlannerNotifier extends StateNotifier<JourneyPlannerState> {
     state = state.copyWith(selectedResult: result);
   }
 
-  void planJourney() {
+  void swapOriginDest() {
+    final tempLat = state.originLat;
+    final tempLng = state.originLng;
+    final tempName = state.originName;
+    final destLat = state.destLat;
+    final destLng = state.destLng;
+    final destName = state.destName;
+
+    state = state.copyWith(
+      originLat: destLat,
+      originLng: destLng,
+      originName: destName,
+      destLat: tempLat,
+      destLng: tempLng,
+      destName: tempName,
+    );
+
+    if (destLat != null && destLng != null) {
+      _loadNearbyStops(destLat, destLng);
+    }
+  }
+
+  Future<void> planJourney() async {
     if (state.originLat == null || state.originLng == null || state.destName.isEmpty) {
       state = state.copyWith(error: 'শুরু ও গন্তব্য স্থান নির্বাচন করুন');
       return;
@@ -131,7 +161,7 @@ class JourneyPlannerNotifier extends StateNotifier<JourneyPlannerState> {
       clearSelectedResult: true,
     );
 
-    final results = JourneyEngine.planFromText(
+    final results = await JourneyEngine.planFromText(
       originText: state.originName,
       destText: state.destName,
       userLat: state.originLat,
@@ -140,12 +170,22 @@ class JourneyPlannerNotifier extends StateNotifier<JourneyPlannerState> {
       destLng: state.destLng,
     );
 
+    final walkOnly = results.length == 1 && results.first.busSegments.isEmpty;
+
+    String? errorMsg;
+    if (results.isEmpty) {
+      errorMsg = 'এই রুটে কোনো বাস পাওয়া যায়নি। অনুগ্রহ করে অন্য স্থান নির্বাচন করুন।';
+    } else if (walkOnly) {
+      errorMsg = null;
+    }
+
     state = state.copyWith(
       isLoading: false,
       hasSearched: true,
       results: results,
       selectedResult: results.isNotEmpty ? results.first : null,
-      error: results.isEmpty ? 'এই রুটে কোনো বাস পাওয়া যায়নি' : null,
+      error: errorMsg,
+      isWalkOnly: walkOnly,
     );
   }
 
