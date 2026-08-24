@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../widgets/glass_card.dart';
 import '../../../data/corridor_finder.dart';
 
 class CorridorBusesScreen extends StatefulWidget {
@@ -64,7 +65,7 @@ class _CorridorBusesScreenState extends State<CorridorBusesScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppConstants.backgroundDark : AppConstants.paper,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('যাত্রা বিবরণ',
             style: TextStyle(fontFamily: AppConstants.fontBengali)),
@@ -246,33 +247,15 @@ class _CorridorBusesScreenState extends State<CorridorBusesScreen> {
   }
 
   Widget _buildBusCard(CorridorBusMatch bus, int index, bool isDark) {
-    final cardColor = isDark ? Colors.grey[900]! : Colors.white;
     final isCheapest = index == 0;
 
     return GestureDetector(
       onTap: () => HapticFeedback.lightImpact(),
-      child: Container(
+      child: GlassCard(
         margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isCheapest
-                ? AppConstants.successGreen
-                : (isDark ? Colors.white12 : AppConstants.cardLine),
-            width: isCheapest ? 1.5 : 1,
-          ),
-          boxShadow: isDark
-              ? []
-              : [BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                )],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+        borderRadius: 14,
+        padding: const EdgeInsets.all(14),
+        child: Row(
             children: [
               Container(
                 width: 42,
@@ -398,20 +381,19 @@ class _CorridorBusesScreenState extends State<CorridorBusesScreen> {
                       ],
                     ),
                   ],
-                ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                AppConstants.formatFare(bus.fare),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : AppConstants.primaryGreen,
-                  fontFamily: AppConstants.fontBengali,
-                ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              AppConstants.formatFare(bus.fare),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : AppConstants.primaryGreen,
+                fontFamily: AppConstants.fontBengali,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ).animate().fadeIn(
             duration: 280.ms,
@@ -420,3 +402,4 @@ class _CorridorBusesScreenState extends State<CorridorBusesScreen> {
     );
   }
 }
+

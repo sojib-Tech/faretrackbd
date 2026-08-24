@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constants/app_constants.dart';
 import '../../services/route_finder_service.dart';
+import '../../widgets/glass_card.dart';
 
 class RouteSearchScreen extends StatefulWidget {
   const RouteSearchScreen({super.key});
@@ -60,7 +61,11 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: const Text('রুট সার্চ'),
         centerTitle: true,
       ),
@@ -265,17 +270,14 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     final from = stops.first;
     final to = stops.last;
 
-    return Card(
+    return GlassCard(
       margin: const EdgeInsets.symmetric(vertical: 5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => _showRouteDetail(result),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      borderRadius: 14,
+      padding: const EdgeInsets.all(14),
+      onTap: () => _showRouteDetail(result),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
               Row(
                 children: [
                   Container(
@@ -395,8 +397,6 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
               ],
             ],
           ),
-        ),
-      ),
     );
   }
 

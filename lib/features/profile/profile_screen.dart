@@ -11,6 +11,7 @@ import '../../models/user_model.dart';
 import '../../services/gemini_service.dart';
 import '../emergency/emergency_screen.dart';
 import '../../widgets/guest_guard.dart';
+import '../../widgets/glass_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -278,17 +279,9 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildStatCard(IconData icon, String label, String value,
       Color color, bool isDark) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.05),
-        ),
-      ),
+      borderRadius: 16,
       child: Column(
         children: [
           Icon(icon, size: 22, color: color),
@@ -319,16 +312,8 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildMenuSection(BuildContext context, bool isDark,
       WidgetRef ref, ThemeMode themeMode, bool isGuest) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.05),
-        ),
-      ),
+    return GlassCard(
+      borderRadius: 16,
       child: Column(
         children: [
           if (isGuest) ...[

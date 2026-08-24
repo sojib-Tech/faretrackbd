@@ -304,6 +304,49 @@ class _FareTrackAppState extends ConsumerState<FareTrackApp>
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       routerConfig: router,
+      builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? const [
+                      Color(0xFF0F0B1E),
+                      Color(0xFF1A0F2E),
+                      Color(0xFF0A0612),
+                    ]
+                  : const [Color(0xFFFBF9FF), Color(0xFFF1ECFB)],
+            ),
+          ),
+          child: isDark
+              ? Stack(
+                  children: [
+                    const _GlowBlob(
+                      color: Color(0x33FF8A5C),
+                      top: -60,
+                      left: -50,
+                      size: 280,
+                    ),
+                    const _GlowBlob(
+                      color: Color(0x2E7C3AED),
+                      bottom: -90,
+                      right: -70,
+                      size: 320,
+                    ),
+                    _GlowBlob(
+                      color: const Color(0x26EC4899),
+                      top: MediaQuery.of(context).size.height * 0.5,
+                      right: -40,
+                      size: 220,
+                    ),
+                    child ?? const SizedBox.shrink(),
+                  ],
+                )
+              : child,
+        );
+      },
     );
   }
 }
@@ -317,6 +360,44 @@ class _ErrorRoute extends StatelessWidget {
       appBar: AppBar(),
       body: const Center(
         child: Text('পৃষ্ঠাটি পাওয়া যায়নি'),
+      ),
+    );
+  }
+}
+
+class _GlowBlob extends StatelessWidget {
+  final Color color;
+  final double? top;
+  final double? bottom;
+  final double? left;
+  final double? right;
+  final double size;
+
+  const _GlowBlob({
+    required this.color,
+    this.top,
+    this.bottom,
+    this.left,
+    this.right,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [color, color.withValues(alpha: 0)],
+          ),
+        ),
       ),
     );
   }

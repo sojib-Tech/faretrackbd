@@ -24,7 +24,11 @@ class _FareCalculatorScreenState extends State<FareCalculatorScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: const Text('ভাড়া ক্যালকুলেটর'),
         centerTitle: true,
       ),

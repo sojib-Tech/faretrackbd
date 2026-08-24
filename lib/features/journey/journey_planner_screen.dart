@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../widgets/glass_card.dart';
 import '../../../providers/journey_planner_provider.dart';
 import '../../../providers/location_provider.dart';
 import '../../../services/search_service.dart';
@@ -81,7 +82,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppConstants.backgroundDark : AppConstants.paper,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           'যাত্রা পরিকল্পনা',
@@ -117,22 +118,11 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
   }
 
   Widget _buildInputSection(JourneyPlannerState state, bool isDark) {
-    final cardColor = isDark ? Colors.grey[900]! : Colors.white;
-
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white12 : AppConstants.cardLine),
-        boxShadow: isDark
-            ? []
-            : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 2))],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
             Container(
               decoration: BoxDecoration(
                 color: AppConstants.backgroundLight,
@@ -244,7 +234,6 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
             _buildSearchButton(state),
           ],
         ),
-      ),
     );
   }
 

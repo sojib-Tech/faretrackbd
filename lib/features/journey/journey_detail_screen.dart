@@ -23,7 +23,7 @@ class JourneyDetailScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: isDark ? AppConstants.backgroundDark : AppConstants.paper,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('যাত্রা বিবরণ',
             style: TextStyle(fontFamily: AppConstants.fontBengali)),

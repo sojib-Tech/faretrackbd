@@ -7,37 +7,37 @@ class LightTheme {
 
   static ThemeData get theme {
     final colorScheme = ColorScheme.light(
-      primary: AppConstants.primaryGreen,
+      primary: AppConstants.primary,
       secondary: AppConstants.primaryAccent,
       tertiary: AppConstants.fareAmber,
       error: AppConstants.errorRed,
       surface: Colors.white,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
-      onSurface: const Color(0xFF1A1A2E),
+      onSurface: AppConstants.ink,
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: AppConstants.backgroundLight,
+      scaffoldBackgroundColor: Colors.transparent,
 
       // Typography
       textTheme: GoogleFonts.hindSiliguriTextTheme().copyWith(
-        displayLarge: GoogleFonts.poppins(
-          fontSize: 52,
-          fontWeight: FontWeight.w800,
+        displayLarge: GoogleFonts.lobster(
+          fontSize: 44,
+          fontWeight: FontWeight.normal,
           color: colorScheme.onSurface,
         ),
-        displayMedium: GoogleFonts.poppins(
+        displayMedium: GoogleFonts.lobster(
           fontSize: 36,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.normal,
           color: colorScheme.onSurface,
         ),
         headlineLarge: GoogleFonts.hindSiliguri(
           fontSize: 24,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: colorScheme.onSurface,
         ),
         headlineMedium: GoogleFonts.hindSiliguri(
@@ -47,7 +47,7 @@ class LightTheme {
         ),
         titleLarge: GoogleFonts.hindSiliguri(
           fontSize: 18,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
         titleMedium: GoogleFonts.hindSiliguri(
@@ -72,7 +72,7 @@ class LightTheme {
         ),
         labelLarge: GoogleFonts.poppins(
           fontSize: 14,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
         labelSmall: GoogleFonts.poppins(
@@ -86,9 +86,9 @@ class LightTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppConstants.glassRadius),
         ),
-        color: Colors.white.withValues(alpha: 0.7),
+        color: Colors.white.withValues(alpha: 0.72),
       ),
 
       // AppBar
@@ -99,9 +99,10 @@ class LightTheme {
         foregroundColor: colorScheme.onSurface,
         titleTextStyle: GoogleFonts.hindSiliguri(
           fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: colorScheme.onSurface,
         ),
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
       ),
 
       // Buttons
@@ -110,11 +111,11 @@ class LightTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
           ),
           textStyle: GoogleFonts.hindSiliguri(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

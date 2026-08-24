@@ -15,6 +15,8 @@ import '../../services/shake_sos_service.dart';
 import '../../widgets/bus_search_delegate.dart';
 import '../../widgets/guest_badge.dart';
 import '../../widgets/guest_guard.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/app_gradient.dart';
 import '../journey/journey_planner_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -133,34 +135,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         locationState.accuracy > 0;
 
     return Scaffold(
-      backgroundColor: isDark ? AppConstants.backgroundDark : AppConstants.paper,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(isDark),
-            if (showGpsWarning) _buildGpsWarning(locationState.accuracy),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 6),
-                    _buildSearchCard(isDark),
-                    const SizedBox(height: 20),
-                    _buildDial(isDark, tripState, progress),
-                    const SizedBox(height: 20),
-                    _buildStatusPills(isDark, elapsed, tripState, locationState),
-                    const SizedBox(height: 24),
-                    _buildCtaButton(isDark, tripState),
-                    const SizedBox(height: 18),
-                    _buildMapPreview(isDark, tripState),
-                    const SizedBox(height: 24),
-                  ],
+      backgroundColor: Colors.transparent,
+      body: AppBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildTopBar(isDark),
+              if (showGpsWarning) _buildGpsWarning(locationState.accuracy),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 6),
+                      _buildSearchCard(isDark),
+                      const SizedBox(height: 20),
+                      _buildDial(isDark, tripState, progress),
+                      const SizedBox(height: 20),
+                      _buildStatusPills(isDark, elapsed, tripState, locationState),
+                      const SizedBox(height: 24),
+                      _buildCtaButton(isDark, tripState),
+                      const SizedBox(height: 18),
+                      _buildMapPreview(isDark, tripState),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _buildBottomNav(isDark),
@@ -178,8 +182,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: isDark ? AppConstants.primaryAccent : AppConstants.primaryGreen,
+              gradient: AppConstants.brandLinearGradient(),
               borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: AppConstants.primary.withValues(alpha: 0.4),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: const Center(child: Icon(Icons.directions_bus_rounded, color: Colors.white, size: 18)),
           ),
@@ -286,35 +297,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   // ── MERGED SEARCH CARD ──
   Widget _buildSearchCard(bool isDark) {
-    final cardColor = isDark ? Colors.grey[900]! : Colors.white;
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white12 : AppConstants.cardLine,
-        ),
-        boxShadow: isDark
-            ? []
-            : [BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 14,
-                offset: const Offset(0, 2),
-              )],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            _buildModeToggle(),
-            const SizedBox(height: 12),
-            _searchMode == 0
-                ? _buildSingleSearch(isDark)
-                : _buildRouteSearch(isDark),
-            const SizedBox(height: 10),
-            _buildRecentChips(isDark),
-          ],
-        ),
+    return GlassCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          _buildModeToggle(),
+          const SizedBox(height: 12),
+          _searchMode == 0
+              ? _buildSingleSearch(isDark)
+              : _buildRouteSearch(isDark),
+          const SizedBox(height: 10),
+          _buildRecentChips(isDark),
+        ],
       ),
     );
   }
@@ -825,15 +820,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     required bool highlight,
   }) {
     return Expanded(
-      child: Container(
+      child: GlassCard(
+        margin: EdgeInsets.zero,
+        borderRadius: 15,
         padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.grey[900] : Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(
-            color: isDark ? Colors.white12 : AppConstants.cardLine,
-          ),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

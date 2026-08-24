@@ -37,11 +37,13 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
   final ValueNotifier<LayerHitResult<DhakaZone>?> _zoneHitNotifier =
       ValueNotifier(null);
   Timer? _updateTimer;
-  Timer? _positionTimer;
   Duration _elapsed = Duration.zero;
   bool _initialCenterDone = false;
   List<LatLng> _roadRoutePoints = [];
   List<StopCoordinate> _nearbyStops = [];
+  List<Polygon> _zonePolygons = [];
+  List<Marker> _stopMarkers = [];
+  AnimationController? _followAnim;
   late AnimationController _stopHoldController;
   bool _isStopHolding = false;
 
@@ -76,28 +78,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
           });
         }
       }
-    });
-
-    _positionTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted) return;
-      final tripState = ref.read(tripProvider);
-      if (tripState.isActive && tripState.routePoints.isNotEmpty) {
-        final newPos = LatLng(
-          tripState.routePoints.last.latitude,
-          tripState.routePoints.last.longitude,
-        );
-        if (_currentPosition == null ||
-            (_currentPosition!.latitude - newPos.latitude).abs() > 0.000005 ||
-            (_currentPosition!.longitude - newPos.longitude).abs() > 0.000005) {
-          setState(() {
-            _currentPosition = newPos;
-            _routeLatLngs = tripState.routePoints
-                .map((p) => LatLng(p.latitude, p.longitude))
-                .toList();
-          });
-          _mapController.move(newPos, _mapController.camera.zoom);
-        }
-      }
+      _updateFromState();
     });
 
     _initLocation();
@@ -148,6 +129,76 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     return R * 2 * atan2(sqrt(h), sqrt(1 - h));
   }
 
+  void _updateFromState() {
+    if (!mounted) return;
+    final tripState = ref.read(tripProvider);
+    final locationState = ref.read(locationProvider);
+    final isActive = tripState.isActive;
+
+    LatLng? newPos;
+    if (isActive && tripState.routePoints.isNotEmpty) {
+      _routeLatLngs = tripState.routePoints
+          .map((p) => LatLng(p.latitude, p.longitude))
+          .toList();
+      newPos = _routeLatLngs.last;
+    } else if (locationState.currentPoint != null) {
+      newPos = LatLng(
+        locationState.currentPoint!.latitude,
+        locationState.currentPoint!.longitude,
+      );
+    }
+
+    if (newPos == null) return;
+
+    final firstFix = _currentPosition == null;
+    final moved = firstFix ||
+        (_currentPosition!.latitude - newPos.latitude).abs() > 0.000004 ||
+        (_currentPosition!.longitude - newPos.longitude).abs() > 0.000004;
+
+    _currentPosition = newPos;
+
+    if (firstFix && !_initialCenterDone) {
+      _initialCenterDone = true;
+      try {
+        _mapController.move(newPos, 15);
+      } catch (_) {}
+    } else if (moved) {
+      _followCamera(newPos);
+    }
+
+    if (moved) _updateNearbyStops();
+  }
+
+  void _followCamera(LatLng pos) {
+    _followAnim?.dispose();
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _followAnim = controller;
+    final latT = Tween<double>(
+      begin: _mapController.camera.center.latitude,
+      end: pos.latitude,
+    ).animate(controller);
+    final lngT = Tween<double>(
+      begin: _mapController.camera.center.longitude,
+      end: pos.longitude,
+    ).animate(controller);
+    final zT = Tween<double>(
+      begin: _mapController.camera.zoom,
+      end: _mapController.camera.zoom,
+    ).animate(controller);
+    controller.addListener(() {
+      if (mounted) {
+        _mapController.move(LatLng(latT.value, lngT.value), zT.value);
+      }
+    });
+    controller.forward().then((_) {
+      if (_followAnim == controller) _followAnim = null;
+      controller.dispose();
+    });
+  }
+
   void _updateNearbyStops() {
     if (_currentPosition == null) return;
     final allStops = StopCoordinates.all;
@@ -156,8 +207,69 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
       return _StopWithDistance(stop: s, distanceKm: d);
     }).where((sd) => sd.distanceKm <= 2.0).toList();
     withDistance.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    final stops = withDistance.map((sd) => sd.stop).toList();
+
+    final markers = <Marker>[];
+    for (int i = 0; i < stops.length; i++) {
+      final stop = stops[i];
+      final isNearest = i == 0;
+      final size = isNearest ? 36.0 : 28.0;
+      final dist = withDistance[i].distanceKm;
+      markers.add(
+        Marker(
+          point: LatLng(stop.lat, stop.lng),
+          width: size,
+          height: size,
+          child: GestureDetector(
+            onTap: () => _showStopInfo(stop),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isNearest
+                    ? AppConstants.primaryGreen
+                    : AppConstants.primaryGreen.withValues(alpha: 0.7),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: isNearest ? 3 : 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isNearest
+                        ? AppConstants.primaryGreen.withValues(alpha: 0.5)
+                        : Colors.black.withValues(alpha: 0.2),
+                    blurRadius: isNearest ? 10 : 4,
+                    spreadRadius: isNearest ? 1 : 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.directions_bus_rounded,
+                    size: isNearest ? 16 : 12,
+                    color: Colors.white,
+                  ),
+                  if (isNearest)
+                    Text(
+                      '${dist.toStringAsFixed(1)}km',
+                      style: const TextStyle(
+                        fontSize: 6,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     setState(() {
-      _nearbyStops = withDistance.map((sd) => sd.stop).toList();
+      _nearbyStops = stops;
+      _stopMarkers = markers;
     });
   }
 
@@ -188,6 +300,18 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
   Future<void> _loadZones() async {
     final zones = await DhakaZoneData.getZones();
     if (mounted) {
+      _zonePolygons = zones.map((zone) {
+        final points = zone.coordinates[0]
+            .map((coord) => LatLng(coord[1], coord[0]))
+            .toList();
+        return Polygon(
+          points: points,
+          color: zone.fillColor.withValues(alpha: 0.2),
+          borderColor: zone.borderColor,
+          borderStrokeWidth: 2,
+          hitValue: zone,
+        );
+      }).toList();
       setState(() {
         _zones = zones;
         _zonesLoaded = true;
@@ -198,7 +322,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
   @override
   void dispose() {
     _updateTimer?.cancel();
-    _positionTimer?.cancel();
+    _followAnim?.dispose();
     _zoneHitNotifier.removeListener(_onZoneHit);
     _zoneHitNotifier.dispose();
     _stopHoldController.dispose();
@@ -291,34 +415,6 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     final locationState = ref.watch(locationProvider);
     final isActive = tripState.isActive;
 
-    if (!isActive &&
-        locationState.currentPoint != null &&
-        _currentPosition == null) {
-      final gp = locationState.currentPoint!;
-      _currentPosition = LatLng(gp.latitude, gp.longitude);
-    }
-
-    if (!isActive && locationState.currentPoint != null) {
-      final gp = locationState.currentPoint!;
-      final newPos = LatLng(gp.latitude, gp.longitude);
-      if (_currentPosition == null ||
-          (_currentPosition!.latitude - newPos.latitude).abs() > 0.00001 ||
-          (_currentPosition!.longitude - newPos.longitude).abs() > 0.00001) {
-        _currentPosition = newPos;
-        _updateNearbyStops();
-      }
-    }
-
-    if (isActive && tripState.routePoints.isNotEmpty) {
-      _routeLatLngs = tripState.routePoints
-          .map((p) => LatLng(p.latitude, p.longitude))
-          .toList();
-      _currentPosition = _routeLatLngs.last;
-      if (_roadRoutePoints.isEmpty && _routeLatLngs.length >= 2) {
-        _fetchRoadRoute();
-      }
-    }
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -343,32 +439,31 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                 urlTemplate: AppConstants.tileUrl,
                 userAgentPackageName: 'com.faretrackbd.app',
               ),
-              if (_zonesLoaded && _zones.isNotEmpty)
+              if (_zonePolygons.isNotEmpty)
                 PolygonLayer(
                   hitNotifier: _zoneHitNotifier,
-                  polygons: _zones.map((zone) {
-                    final points = zone.coordinates[0]
-                        .map((coord) => LatLng(coord[1], coord[0]))
-                        .toList();
-                    return Polygon(
-                      points: points,
-                      color: zone.fillColor.withValues(alpha: 0.2),
-                      borderColor: zone.borderColor,
-                      borderStrokeWidth: 2,
-                      hitValue: zone,
-                    );
-                  }).toList(),
+                  polygons: _zonePolygons,
                 ),
-              if ((_roadRoutePoints.isNotEmpty ? _roadRoutePoints : _routeLatLngs).length > 1)
+              if (_roadRoutePoints.isNotEmpty && widget.routePoints != null)
                 PolylineLayer(
                   polylines: [
                     Polyline(
-                      points: _roadRoutePoints.isNotEmpty ? _roadRoutePoints : _routeLatLngs,
+                      points: _roadRoutePoints,
+                      color: AppConstants.primaryGreen.withValues(alpha: 0.35),
+                      strokeWidth: 6,
+                    ),
+                  ],
+                ),
+              if (_routeLatLngs.length > 1)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: _routeLatLngs,
                       color: AppConstants.primaryAccent
-                          .withValues(alpha: 0.8),
+                          .withValues(alpha: 0.9),
                       strokeWidth: 4,
                       borderColor:
-                          Colors.white.withValues(alpha: 0.3),
+                          Colors.white.withValues(alpha: 0.35),
                       borderStrokeWidth: 1,
                     ),
                   ],
@@ -413,61 +508,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                     ),
                   ],
                 ),
-              if (_nearbyStops.isNotEmpty)
+              if (_stopMarkers.isNotEmpty)
                 MarkerLayer(
-                  markers: _nearbyStops.asMap().entries.map((entry) {
-                    final i = entry.key;
-                    final stop = entry.value;
-                    final dist = _calcDistanceKm(_currentPosition!, LatLng(stop.lat, stop.lng));
-                    final isNearest = i == 0;
-                    final size = isNearest ? 36.0 : 28.0;
-                    return Marker(
-                      point: LatLng(stop.lat, stop.lng),
-                      width: size,
-                      height: size,
-                      child: GestureDetector(
-                        onTap: () => _showStopInfo(stop),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isNearest
-                                ? AppConstants.primaryGreen
-                                : AppConstants.primaryGreen.withValues(alpha: 0.7),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: Colors.white, width: isNearest ? 3 : 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: isNearest
-                                    ? AppConstants.primaryGreen.withValues(alpha: 0.5)
-                                    : Colors.black.withValues(alpha: 0.2),
-                                blurRadius: isNearest ? 10 : 4,
-                                spreadRadius: isNearest ? 1 : 0,
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.directions_bus_rounded,
-                                size: isNearest ? 16 : 12,
-                                color: Colors.white,
-                              ),
-                              if (isNearest)
-                                Text(
-                                  '${dist.toStringAsFixed(1)}km',
-                                  style: const TextStyle(
-                                    fontSize: 6,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  markers: _stopMarkers,
                 ),
             ],
           ),
@@ -509,7 +552,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
           setState(() {
             _currentPosition = newPos;
           });
-          _mapController.move(newPos, 15);
+          _followCamera(newPos);
         }
       },
       child: const Icon(Icons.my_location, color: AppConstants.primaryAccent),

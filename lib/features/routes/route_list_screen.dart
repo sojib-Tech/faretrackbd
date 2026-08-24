@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
+import '../../widgets/glass_card.dart';
 import '../../providers/bus_route_provider.dart';
 import '../../models/bus_route.dart';
 import 'route_detail_screen.dart';
@@ -101,32 +102,29 @@ class _RouteCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Card(
+    return GlassCard(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          FocusScope.of(context).unfocus();
-          if (route is BusRoute) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => RouteDetailScreen(route: route as BusRoute),
-              ),
-            );
-          } else if (route is DdrRoute) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => IntercityDetailScreen(route: route as DdrRoute),
-              ),
-            );
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+      borderRadius: 12,
+      padding: const EdgeInsets.all(14),
+      onTap: () {
+        FocusScope.of(context).unfocus();
+        if (route is BusRoute) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RouteDetailScreen(route: route as BusRoute),
+            ),
+          );
+        } else if (route is DdrRoute) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => IntercityDetailScreen(route: route as DdrRoute),
+            ),
+          );
+        }
+      },
+      child: Row(
             children: [
               Container(
                 width: 48,
@@ -197,8 +195,6 @@ class _RouteCard extends ConsumerWidget {
               Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
             ],
           ),
-        ),
-      ),
     );
   }
 }

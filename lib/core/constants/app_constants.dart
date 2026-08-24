@@ -32,22 +32,93 @@ class AppConstants {
 
   static const String fontBengali = 'HindSiliguri';
   static const String fontEnglish = 'Poppins';
+  static const String fontDisplay = 'Sora';
 
-  static const Color primaryGreen = Color(0xFF0B5345);
-  static const Color pineDeep = Color(0xFF0A4536);
-  static const Color pineGlow = Color(0xFFC9E8DD);
-  static const Color primaryAccent = Color(0xFF1ABC9C);
-  static const Color fareAmber = Color(0xFFF39C12);
-  static const Color amberSoft = Color(0xFFFBEED7);
-  static const Color ink = Color(0xFF12231F);
-  static const Color inkSoft = Color(0xFF4B615C);
-  static const Color paper = Color(0xFFF3F2EC);
-  static const Color cardLine = Color(0xFFE2E0D6);
-  static const Color warn = Color(0xFFC78A1F);
-  static const Color errorRed = Color(0xFFE74C3C);
-  static const Color successGreen = Color(0xFF27AE60);
-  static const Color backgroundLight = Color(0xFFF4F6F5);
-  static const Color backgroundDark = Color(0xFF121212);
+  // Brand palette (vibrant gradient / glass) -------------------------------
+  static const Color primary = Color(0xFF7C3AED);
+  static const Color primaryGreen = Color(0xFF7C3AED); // legacy alias -> brand violet
+  static const Color primaryDeep = Color(0xFF6D28D9);
+  static const Color pineDeep = Color(0xFF6D28D9); // legacy alias
+  static const Color primaryAccent = Color(0xFFEC4899);
+  static const Color primarySoft = Color(0xFFEDE9FE);
+  static const Color pineGlow = Color(0xFFEDE9FE); // legacy alias
+  static const Color fareAmber = Color(0xFFF59E0B);
+  static const Color amberSoft = Color(0xFFFEF3C7);
+  static const Color ink = Color(0xFF1E1B2E);
+  static const Color inkSoft = Color(0xFF6B7280);
+  static const Color paper = Color(0xFFF7F6FB);
+  static const Color cardLine = Color(0xFFECEAF4);
+  static const Color warn = Color(0xFFF59E0B);
+  static const Color errorRed = Color(0xFFF43F5E);
+  static const Color successGreen = Color(0xFF22C55E);
+  static const Color backgroundLight = Color(0xFFF7F6FB);
+  static const Color backgroundDark = Color(0xFF0F0E1A);
+
+  // Gradients ---------------------------------------------------------------
+  static const List<Color> brandGradient = [Color(0xFF8B5CF6), Color(0xFFEC4899)];
+  static const List<Color> brandGradientLong = [
+    Color(0xFF7C3AED),
+    Color(0xFF8B5CF6),
+    Color(0xFFEC4899),
+  ];
+  static const List<Color> heroGradient = [
+    Color(0xFF7C3AED),
+    Color(0xFFA855F7),
+    Color(0xFFEC4899),
+  ];
+  static const List<Color> accentGradient = [Color(0xFF22D3EE), Color(0xFF3B82F6)];
+  static const List<Color> fareGradient = [Color(0xFFF59E0B), Color(0xFFFB923C)];
+  static const List<Color> successGradient = [Color(0xFF34D399), Color(0xFF22C55E)];
+
+  static const Alignment gradientBegin = Alignment.topLeft;
+  static const Alignment gradientEnd = Alignment.bottomRight;
+
+  static LinearGradient brandLinearGradient({
+    Alignment begin = gradientBegin,
+    Alignment end = gradientEnd,
+  }) =>
+      LinearGradient(begin: begin, end: end, colors: brandGradient);
+
+  static LinearGradient heroLinearGradient({
+    Alignment begin = gradientBegin,
+    Alignment end = gradientEnd,
+  }) =>
+      LinearGradient(begin: begin, end: end, colors: heroGradient);
+
+  static LinearGradient gradientFrom(List<Color> colors,
+          {Alignment begin = gradientBegin, Alignment end = gradientEnd}) =>
+      LinearGradient(begin: begin, end: end, colors: colors);
+
+  // Glass tokens ------------------------------------------------------------
+  static const double glassRadius = 24.0;
+  static const double glassBlur = 18.0;
+
+  // Kissasian / Figma-exported design tokens --------------------------------
+  // Fonts (resolved via google_fonts at point of use)
+  static const String fontLobster = 'Lobster';
+  static const String fontRoboto = 'Roboto';
+  static const String fontInter = 'Inter';
+  static const String fontMontserrat = 'Montserrat';
+
+  // Text colors (from design system CSS)
+  static const Color textWhite = Color(0xFFFFFFFF);
+  static const Color textSoft = Color(0xFFE8E8E8);
+  static const Color textGrey = Color(0xFFCAC8C8);
+  static const Color textGreyStrong = Color(0xFF434343);
+  static const Color textGreyMid = Color(0xFF7E7E7E);
+  static const Color textGreyLight = Color(0xFFC5C5C5);
+  static const Color textDark = Color(0xFF2F2F2F);
+  static const Color textGreySoft = Color(0xFF888888);
+
+  // Glass / surface presets (from rectangle-32, rectangle-77, rectangle-11)
+  static const Color glassDarkFill = Color(0x661D1D1D);
+  static const Color glassLightFill = Color(0x66FFFFFF);
+  static const Color pillWhiteFill = Color(0xFFFFFFFF);
+  static const Color solidDarkFill = Color(0xFF2F2F2F);
+  static const double kissGlassBlur = 40.0;
+  static const double kissGlassRadius = 15.0;
+  static const double kissPillRadius = 50.0;
+  static const List<Color> kissGlowBlob = [Color(0xFFFFFCE4), Color(0xFFEC4899)];
 
   static const double journeySearchRadiusMeters = 1500.0;
   static const double journeyTransferMaxWalkMeters = 500.0;

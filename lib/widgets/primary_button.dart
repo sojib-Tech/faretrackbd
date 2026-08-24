@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
+import 'gradient_button.dart';
 
 class PrimaryButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
   final VoidCallback? onLongPress;
   final bool isLoading;
-  final Color? backgroundColor;
+  final List<Color>? gradient;
   final Color? foregroundColor;
   final double height;
   final double width;
   final IconData? icon;
   final bool hasBreathingAnimation;
+  final double borderRadius;
 
   const PrimaryButton({
     super.key,
@@ -19,12 +21,13 @@ class PrimaryButton extends StatefulWidget {
     this.onPressed,
     this.onLongPress,
     this.isLoading = false,
-    this.backgroundColor,
+    this.gradient,
     this.foregroundColor,
     this.height = 56,
     this.width = double.infinity,
     this.icon,
     this.hasBreathingAnimation = false,
+    this.borderRadius = 18,
   });
 
   @override
@@ -71,49 +74,16 @@ class _PrimaryButtonState extends State<PrimaryButton>
 
   @override
   Widget build(BuildContext context) {
-    final btn = SizedBox(
-      width: widget.width,
+    final btn = GradientButton(
+      label: widget.label,
+      onPressed: widget.onPressed,
+      isLoading: widget.isLoading,
+      gradient: widget.gradient ?? AppConstants.brandGradient,
+      foregroundColor: widget.foregroundColor ?? Colors.white,
       height: widget.height,
-      child: ElevatedButton(
-        onPressed: widget.isLoading ? null : widget.onPressed,
-        onLongPress: widget.isLoading ? null : widget.onLongPress,
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              widget.backgroundColor ?? AppConstants.primaryGreen,
-          foregroundColor: widget.foregroundColor ?? Colors.white,
-          disabledBackgroundColor: Colors.grey[300],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 0,
-        ),
-        child: widget.isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.icon != null) ...[
-                    Icon(widget.icon, size: 20),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    widget.label,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: AppConstants.fontBengali,
-                    ),
-                  ),
-                ],
-              ),
-      ),
+      width: widget.width,
+      icon: widget.icon,
+      borderRadius: widget.borderRadius,
     );
 
     if (_breathController != null) {

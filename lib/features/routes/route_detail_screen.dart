@@ -21,7 +21,11 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
     final route = widget.route;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: Text(route.routeNo),
         centerTitle: true,
       ),

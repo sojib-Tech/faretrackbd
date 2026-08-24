@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../models/journey/journey_plan.dart';
 import '../../../models/journey/journey_result.dart';
 import '../../../providers/journey_planner_provider.dart';
+import '../../../widgets/glass_card.dart';
 import 'corridor_buses_screen.dart';
 
 class JourneyResultsScreen extends ConsumerStatefulWidget {
@@ -43,7 +44,7 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppConstants.backgroundDark : AppConstants.paper,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('যাত্রা পরিকল্পনা',
             style: TextStyle(fontFamily: AppConstants.fontBengali)),
@@ -138,7 +139,6 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
 
   Widget _buildOptionCard(JourneyResult result, int index, bool isDark, JourneyPlannerState state, RoutePreference pref) {
     final isRecommended = index == 0;
-    final cardColor = isDark ? Colors.grey[900]! : Colors.white;
 
     return GestureDetector(
       onTap: () {
@@ -162,28 +162,11 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
           );
         }
       },
-      child: Container(
+      child: GlassCard(
         margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isRecommended
-                ? AppConstants.primaryGreen
-                : (isDark ? Colors.white12 : AppConstants.cardLine),
-            width: isRecommended ? 2 : 1,
-          ),
-          boxShadow: isDark
-              ? []
-              : [BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2),
-                )],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+        borderRadius: 18,
+        padding: const EdgeInsets.all(16),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -246,7 +229,6 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
               _buildStatsRow(result, isDark, pref),
             ],
           ),
-        ),
       ).animate().fadeIn(duration: 300.ms, delay: Duration(milliseconds: index * 100)),
     );
   }

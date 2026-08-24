@@ -11,8 +11,7 @@ final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
 class ThemeNotifier extends StateNotifier<ThemeMode> {
   final StorageService _storage;
 
-  ThemeNotifier(this._storage)
-      : super(_storage.getIsDarkMode() ? ThemeMode.dark : ThemeMode.light);
+  ThemeNotifier(this._storage) : super(ThemeMode.dark);
 
   void toggleTheme() {
     final newMode =

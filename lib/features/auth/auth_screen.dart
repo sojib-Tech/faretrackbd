@@ -242,9 +242,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0A0E27),
-              Color(0xFF0D0D1A),
-              Color(0xFF000000),
+              Color(0xFF1B0B2E),
+              Color(0xFF120A24),
+              Color(0xFF0A0612),
             ],
           ),
         ),
