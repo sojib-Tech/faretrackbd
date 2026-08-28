@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../data/stop_coordinates.dart';
+import '../../../core/utils/road_router.dart';
 import '../../../models/journey/journey_plan.dart';
 import '../../../models/journey/journey_result.dart';
 import '../../../providers/journey_planner_provider.dart';
 import '../../../widgets/glass_card.dart';
-import 'corridor_buses_screen.dart';
+import 'journey_map_screen.dart';
 
 class JourneyResultsScreen extends ConsumerStatefulWidget {
   const JourneyResultsScreen({super.key});
@@ -25,6 +29,8 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
     ('সস্তা', RoutePreference.cheapest),
     ('কম হাঁটা', RoutePreference.leastWalking),
   ];
+
+  final Map<String, List<LatLng>> _previewRoad = {};
 
   @override
   void initState() {
@@ -69,16 +75,151 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
           ? const Center(child: CircularProgressIndicator())
           : state.results.isEmpty
               ? _buildEmpty(state, isDark)
-               : TabBarView(
-                  controller: _tabController,
-                  children: _tabs.map((tab) => _buildRouteList(
-                    state.results,
-                    tab.$2,
-                    isDark,
-                    state,
-                  )).toList(),
-                ),
+               : Column(
+                children: [
+                  _buildMapPreview(state.results.first, isDark),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: _tabs.map((tab) => _buildRouteList(
+                        state.results,
+                        tab.$2,
+                        isDark,
+                        state,
+                      )).toList(),
+                    ),
+                  ),
+                ],
+              ),
     );
+  }
+
+  Widget _buildMapPreview(JourneyResult result, bool isDark) {
+    final raw = _previewPoints(result);
+    if (raw.length < 2) return const SizedBox.shrink();
+
+    final pts = _previewRoad.containsKey(result.id)
+        ? _previewRoad[result.id]!
+        : raw;
+
+    double lat = 0, lng = 0;
+    for (final p in pts) {
+      lat += p.latitude;
+      lng += p.longitude;
+    }
+    final center = LatLng(lat / pts.length, lng / pts.length);
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => JourneyMapScreen(result: result)),
+      ),
+      child: Container(
+        height: 190,
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? Colors.white12 : AppConstants.cardLine,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: center,
+            initialZoom: 12,
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.none,
+            ),
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: AppConstants.tileUrl,
+              userAgentPackageName: 'com.faretrackbd.app',
+            ),
+            PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: pts,
+                  color: Colors.white,
+                  strokeWidth: 9,
+                ),
+                Polyline(
+                  points: pts,
+                  color: AppConstants.primaryGreen,
+                  strokeWidth: 5,
+                  pattern: const StrokePattern.solid(),
+                ),
+              ],
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: pts.first,
+                  width: 30,
+                  height: 30,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppConstants.primaryGreen,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'A',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Marker(
+                  point: pts.last,
+                  width: 30,
+                  height: 30,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppConstants.errorRed,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'B',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<LatLng> _previewPoints(JourneyResult result) {
+    final pts = <LatLng>[];
+    for (final seg in result.busSegments) {
+      final route = seg.route;
+      final start = seg.boardStopIndex < seg.alightStopIndex
+          ? seg.boardStopIndex
+          : seg.alightStopIndex;
+      final end = seg.boardStopIndex < seg.alightStopIndex
+          ? seg.alightStopIndex
+          : seg.boardStopIndex;
+      for (int i = start; i <= end && i < route.stops.length; i++) {
+        final c = StopCoordinates.find(route.stops[i].name);
+        if (c != null) pts.add(LatLng(c.lat, c.lng));
+      }
+    }
+    return pts;
   }
 
   Widget _buildEmpty(JourneyPlannerState state, bool isDark) {
@@ -150,14 +291,7 @@ class _JourneyResultsScreenState extends ConsumerState<JourneyResultsScreen>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => CorridorBusesScreen(
-                originName: state.originName,
-                destName: state.destName,
-                originLat: state.originLat!,
-                originLng: state.originLng!,
-                destLat: state.destLat!,
-                destLng: state.destLng!,
-              ),
+              builder: (_) => JourneyMapScreen(result: result),
             ),
           );
         }

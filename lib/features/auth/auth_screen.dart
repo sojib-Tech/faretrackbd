@@ -88,7 +88,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       final rawEmail = _emailController.text;
       final email = rawEmail.trim();
 
-      // ── Guard clause: block invalid emails before calling the service ──
       if (!RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$').hasMatch(email)) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -103,96 +102,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         return;
       }
 
-      // --- STEP 1: Send OTP ---
-      if (!_isOtpSent) {
-
-        debugPrint('[SignUp] Sending OTP to: $email');
-        setState(() => _isOtpLoading = true);
-
-        try {
-          final otp = await EmailService.sendOtp(email);
-          debugPrint('[SignUp] OTP sent successfully: $otp');
-          setState(() {
-            _isOtpLoading = false;
-            _isOtpSent = true;
-            _lastOtp = otp;
-            _otpController.text = otp;
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('আপনার OTP: $otp (এছাড়াও ইমেইলে পাঠানো হয়েছে)', textAlign: TextAlign.center),
-                backgroundColor: const Color(0xFF1D9E75),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                duration: const Duration(seconds: 10),
-              ),
-            );
-          }
-        } catch (e) {
-          debugPrint('[SignUp] EmailJS threw: $e');
-          setState(() => _isOtpLoading = false);
-          if (mounted) {
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('EmailJS Server Error'),
-                content: Text(e.toString()),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-            );
-          }
-        }
-        return;
-      }
-
-      // --- STEP 2: Verify OTP ---
-      final otpCode = _otpController.text.trim();
-      debugPrint('[SignUp] Verifying OTP for: $email, code: $otpCode');
-
-      setState(() => _isOtpLoading = true);
-
-      try {
-        final valid = await EmailService.verifyOtp(email, otpCode);
-        debugPrint('[SignUp] verifyOtp result: $valid');
-
-        if (!valid) {
-          setState(() => _isOtpLoading = false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('ভুল বা মেয়াদোত্তীর্ণ Code', textAlign: TextAlign.center),
-                backgroundColor: Colors.red.shade800,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            );
-          }
-          return;
-        }
-      } catch (e) {
-        debugPrint('[SignUp] verifyOtp EXCEPTION: $e');
-        setState(() => _isOtpLoading = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('ভেরিফিকেশন ব্যর্থ: ${e.toString()}', textAlign: TextAlign.center),
-              backgroundColor: Colors.red.shade800,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        }
-        return;
-      }
-
-      // --- STEP 3: Create Firebase Auth account ---
-      debugPrint('[SignUp] OTP verified, creating account for: $email');
       final success = await ref.read(authProvider.notifier).signUp(
             _nameController.text,
             email,
@@ -436,9 +345,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     return Column(
       key: const ValueKey('signin'),
       children: [
-        _buildGoogleButton(authState.isLoading),
-        const SizedBox(height: 20),
-        _buildDivider(),
         const SizedBox(height: 20),
         _buildField(
           controller: _emailController,
@@ -484,16 +390,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     return Column(
       key: const ValueKey('signup'),
       children: [
-        _buildGoogleButton(authState.isLoading && !_isOtpLoading),
-        const SizedBox(height: 20),
-        _buildDivider(),
         const SizedBox(height: 20),
         _buildField(
           controller: _nameController,
           focusNode: _nameFocus,
           hint: 'Full Name',
           icon: Icons.person_outlined,
-          enabled: !_isOtpSent,
+          enabled: true,
         ),
         const SizedBox(height: 14),
         _buildField(
@@ -501,7 +404,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           focusNode: _emailFocus,
           hint: 'Email',
           icon: Icons.email_outlined,
-          enabled: !_isOtpSent,
+          enabled: true,
         ),
         const SizedBox(height: 14),
         _buildPasswordField(
@@ -510,7 +413,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           hint: 'Password',
           obscure: _obscurePassword,
           onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
-          enabled: !_isOtpSent,
+          enabled: true,
         ),
         const SizedBox(height: 14),
         _buildPasswordField(
@@ -519,30 +422,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           hint: 'Confirm Password',
           obscure: _obscureConfirm,
           onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
-          enabled: !_isOtpSent,
-        ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeInOut,
-          child: _isOtpSent
-              ? Column(
-                  children: [
-                    _buildOtpDisplay(),
-                    const SizedBox(height: 10),
-                    _buildOtpField(),
-                  ],
-                )
-              : const SizedBox.shrink(),
+          enabled: true,
         ),
         if (authState.error != null) _buildError(authState.error!),
         const SizedBox(height: 16),
         _buildPrimaryButton(
-          label: _isOtpSent ? 'Verify OTP' : 'Create Account',
-          isLoading: _isOtpSent ? _isOtpLoading : authState.isLoading || _isOtpLoading,
-          onTap: () {
-            debugPrint('=== [CRITICAL] Button Pressed Directly from Widget Tree! ===');
-            _handleSignUp();
-          },
+          label: 'Create Account',
+          isLoading: authState.isLoading,
+          onTap: _handleSignUp,
         ),
       ],
     );
@@ -804,84 +691,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(child: Container(height: 1, color: const Color(0xFFFFFFFF).withValues(alpha: 0.1))),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'OR',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFFFFFFFF).withValues(alpha: 0.3),
-              letterSpacing: 2,
-            ),
-          ),
-        ),
-        Expanded(child: Container(height: 1, color: const Color(0xFFFFFFFF).withValues(alpha: 0.1))),
-      ],
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildGoogleButton(bool isLoading) {
-    return GestureDetector(
-      onTap: isLoading ? null : _handleGoogleSignIn,
-      child: Container(
-        width: double.infinity,
-        height: 52,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: const Color(0xFFFFFFFF).withValues(alpha: 0.12),
-          ),
-          color: const Color(0xFFFFFFFF).withValues(alpha: 0.04),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF4285F4),
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'G',
-                      style: TextStyle(
-                        color: Color(0xFF4285F4),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        fontFamily: 'Poppins',
-                        height: 1,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Sign in with Google',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFFFFFFF).withValues(alpha: 0.85),
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildBottomText() {

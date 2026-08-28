@@ -125,7 +125,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
         children: [
             Container(
               decoration: BoxDecoration(
-                color: AppConstants.backgroundLight,
+                color: isDark ? const Color(0xFF1E1E2E) : AppConstants.backgroundLight,
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Row(

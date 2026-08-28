@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -17,15 +19,46 @@ class JourneyMapScreen extends StatefulWidget {
   State<JourneyMapScreen> createState() => _JourneyMapScreenState();
 }
 
+class _PathSegment {
+  final List<LatLng> rawPoints;
+  final List<LatLng> roadPoints;
+  final List<String> names;
+  final Color color;
+  final bool isBus;
+  final bool isAc;
+  final String label;
+
+  _PathSegment({
+    required this.rawPoints,
+    required this.color,
+    required this.isBus,
+    required this.isAc,
+    required this.label,
+    List<String>? names,
+    List<LatLng>? roadPoints,
+  })  : roadPoints = roadPoints ?? const [],
+        names = names ?? const [];
+
+  void setRoad(List<LatLng> pts) {
+    roadPoints
+      ..clear()
+      ..addAll(pts);
+  }
+}
+
 class _JourneyMapScreenState extends State<JourneyMapScreen> {
   late MapController _mapController;
-  List<LatLng> _busRoutePoints = [];
-  List<String> _stopNames = [];
+  final List<_PathSegment> _segments = [];
   LatLng? _origin;
   LatLng? _destination;
   List<DhakaZone> _zones = [];
   bool _loaded = false;
-  List<LatLng> _roadRoutePoints = [];
+
+  static const List<Color> _busPalette = [
+    AppConstants.primaryGreen,
+    AppConstants.primaryAccent,
+    AppConstants.fareAmber,
+  ];
 
   @override
   void initState() {
@@ -35,40 +68,132 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
     _loadZones();
   }
 
+  LatLng? _resolve(String label) {
+    if (label.isEmpty) return null;
+    final c = StopCoordinates.find(label);
+    if (c != null) return LatLng(c.lat, c.lng);
+    return null;
+  }
+
   void _extractRouteData() {
+    _segments.clear();
     final result = widget.result;
-    final allPoints = <LatLng>[];
-    final names = <String>[];
 
-    for (final seg in result.busSegments) {
-      final route = seg.route;
-      final start = seg.boardStopIndex < seg.alightStopIndex
-          ? seg.boardStopIndex
-          : seg.alightStopIndex;
-      final end = seg.boardStopIndex < seg.alightStopIndex
-          ? seg.alightStopIndex
-          : seg.boardStopIndex;
+    final firstSeg = result.segments.isNotEmpty ? result.segments.first : null;
+    final lastSeg = result.segments.isNotEmpty ? result.segments.last : null;
 
-      for (int i = start; i <= end && i < route.stops.length; i++) {
-        final stopName = route.stops[i].name;
-        final coord = StopCoordinates.find(stopName);
-        if (coord != null) {
-          final point = LatLng(coord.lat, coord.lng);
-          if (allPoints.isEmpty || allPoints.last != point) {
-            allPoints.add(point);
-            names.add(stopName);
-          }
+    final firstBus = result.busSegments.isNotEmpty ? result.busSegments.first : null;
+    final lastBus = result.busSegments.isNotEmpty ? result.busSegments.last : null;
+
+    if (firstBus != null) {
+      _origin = _resolve(firstBus.boardStop) ?? _resolve(firstBus.busNameBn);
+    } else {
+      _origin = _resolve(firstSeg?.runtimeType == WalkingSegment
+          ? (firstSeg as WalkingSegment).fromLabel
+          : '');
+    }
+    if (lastBus != null) {
+      _destination = _resolve(lastBus.alightStop) ?? _resolve(lastBus.busNameBn);
+    } else {
+      _destination = _resolve(lastSeg?.runtimeType == WalkingSegment
+          ? (lastSeg as WalkingSegment).toLabel
+          : '');
+    }
+
+    int busIndex = 0;
+    for (final seg in result.segments) {
+      if (seg is BusSegment) {
+        final color = _busPalette[busIndex % _busPalette.length];
+        busIndex++;
+        final built = _busPoints(seg);
+        if (built.points.length >= 2) {
+          _segments.add(_PathSegment(
+            rawPoints: built.points,
+            names: built.names,
+            color: color,
+            isBus: true,
+            isAc: seg.isAc,
+            label: seg.busNameBn,
+          ));
+        }
+      } else if (seg is WalkingSegment) {
+        final built = _walkPoints(seg);
+        if (built.points.length >= 2) {
+          _segments.add(_PathSegment(
+            rawPoints: built.points,
+            names: built.names,
+            color: Colors.grey.shade500,
+            isBus: false,
+            isAc: false,
+            label: 'হাঁটা',
+          ));
+        }
+      } else if (seg is TransferSegment) {
+        final from = _resolve(seg.fromStop);
+        final to = _resolve(seg.toStop);
+        if (from != null && to != null && from != to) {
+          _segments.add(_PathSegment(
+            rawPoints: [from, to],
+            names: [seg.fromStop, seg.toStop],
+            color: AppConstants.fareAmber,
+            isBus: false,
+            isAc: false,
+            label: 'সংযোগ',
+          ));
         }
       }
     }
 
-    if (allPoints.isNotEmpty) {
-      _origin = allPoints.first;
-      _destination = allPoints.last;
+    if (_origin == null) {
+      for (final seg in _segments) {
+        if (seg.rawPoints.isNotEmpty) {
+          _origin = seg.rawPoints.first;
+          break;
+        }
+      }
     }
+    if (_destination == null) {
+      for (final seg in _segments.reversed) {
+        if (seg.rawPoints.isNotEmpty) {
+          _destination = seg.rawPoints.last;
+          break;
+        }
+      }
+    }
+  }
 
-    _busRoutePoints = allPoints;
-    _stopNames = names;
+  ({List<LatLng> points, List<String> names}) _busPoints(BusSegment seg) {
+    final route = seg.route;
+    final start = seg.boardStopIndex < seg.alightStopIndex
+        ? seg.boardStopIndex
+        : seg.alightStopIndex;
+    final end = seg.boardStopIndex < seg.alightStopIndex
+        ? seg.alightStopIndex
+        : seg.boardStopIndex;
+    final pts = <LatLng>[];
+    final names = <String>[];
+    for (int i = start; i <= end && i < route.stops.length; i++) {
+      final c = StopCoordinates.find(route.stops[i].name);
+      if (c != null) {
+        pts.add(LatLng(c.lat, c.lng));
+        names.add(route.stops[i].name);
+      }
+    }
+    return (points: pts, names: names);
+  }
+
+  ({List<LatLng> points, List<String> names}) _walkPoints(WalkingSegment seg) {
+    final from = _resolve(seg.fromLabel);
+    final to = _resolve(seg.toLabel);
+    if (from != null && to != null) {
+      return (
+        points: [from, to],
+        names: [seg.fromLabel, seg.toLabel],
+      );
+    }
+    if (from != null) return (points: [from], names: [seg.fromLabel]);
+    if (to != null) return (points: [to], names: [seg.toLabel]);
+    return (points: const [], names: const []);
   }
 
   Future<void> _loadZones() async {
@@ -79,17 +204,18 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
         _loaded = true;
       });
       _fitBounds();
-      _fetchRoadRoute();
+      unawaited(_fetchRoadRoutes());
     }
   }
 
-  Future<void> _fetchRoadRoute() async {
-    if (_busRoutePoints.length < 2) return;
-    final roadPoints = await RoadRouter.getRoadRoute(_busRoutePoints);
-    if (mounted && roadPoints.length > _busRoutePoints.length) {
-      setState(() {
-        _roadRoutePoints = roadPoints;
-      });
+  Future<void> _fetchRoadRoutes() async {
+    for (final seg in _segments) {
+      if (seg.rawPoints.length < 2) continue;
+      final pts = await RoadRouter.getRoadRoute(seg.rawPoints);
+      if (!mounted) return;
+      if (pts.length > seg.rawPoints.length) {
+        setState(() => seg.setRoad(pts));
+      }
     }
   }
 
@@ -97,7 +223,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
     final allPoints = <LatLng>[
       ?_origin,
       ?_destination,
-      ..._busRoutePoints,
+      ..._segments.expand((s) => s.rawPoints),
     ];
     if (allPoints.length < 2) return;
     try {
@@ -167,18 +293,9 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                     );
                   }).toList(),
                 ),
-              if ((_roadRoutePoints.isNotEmpty ? _roadRoutePoints : _busRoutePoints).length > 1)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _roadRoutePoints.isNotEmpty ? _roadRoutePoints : _busRoutePoints,
-                      color: AppConstants.primaryGreen,
-                      strokeWidth: 5,
-                      borderColor: Colors.white.withValues(alpha: 0.6),
-                      borderStrokeWidth: 2,
-                    ),
-                  ],
-                ),
+              PolylineLayer(
+                polylines: _buildRoadPolylines(),
+              ),
               if (_origin != null && _destination != null)
                 MarkerLayer(
                   markers: [
@@ -198,10 +315,15 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 22,
+                        child: const Center(
+                          child: Text(
+                            'A',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -221,58 +343,27 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.flag_rounded,
-                          color: Colors.white,
-                          size: 20,
+                        child: const Center(
+                          child: Text(
+                            'B',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
-              if (_busRoutePoints.length > 2)
+              if (_segments.length > 1)
                 MarkerLayer(
-                  markers: _busRoutePoints.asMap().entries.where((e) => e.key > 0 && e.key < _busRoutePoints.length - 1).map((e) {
-                    final name = e.key < _stopNames.length ? _stopNames[e.key] : '';
-                    return Marker(
-                      point: e.value,
-                      width: 24,
-                      height: 24,
-                      child: GestureDetector(
-                        onTap: () {
-                          if (name.isNotEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(name, style: const TextStyle(fontFamily: AppConstants.fontBengali)),
-                                duration: const Duration(seconds: 1),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppConstants.primaryGreen, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${e.key}',
-                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppConstants.primaryGreen),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  markers: _buildTransferMarkers(),
                 ),
+              MarkerLayer(
+                markers: _buildStopMarkers(),
+              ),
             ],
           ),
           Positioned(
@@ -290,6 +381,119 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
         ],
       ),
     );
+  }
+
+  List<Polyline> _buildRoadPolylines() {
+    final lines = <Polyline>[];
+    for (final s in _segments.where((s) => s.rawPoints.length > 1)) {
+      final pts = s.roadPoints.length > s.rawPoints.length
+          ? s.roadPoints
+          : s.rawPoints;
+      if (s.isBus) {
+        lines.add(Polyline(
+          points: pts,
+          color: Colors.white,
+          strokeWidth: s.isAc ? 11 : 9,
+        ));
+        lines.add(Polyline(
+          points: pts,
+          color: s.color,
+          strokeWidth: s.isAc ? 6 : 5,
+          pattern: const StrokePattern.solid(),
+        ));
+      } else {
+        lines.add(Polyline(
+          points: pts,
+          color: s.color,
+          strokeWidth: 3,
+          pattern: StrokePattern.dashed(segments: const [6, 4]),
+        ));
+      }
+    }
+    return lines;
+  }
+
+  List<Marker> _buildTransferMarkers() {
+    final markers = <Marker>[];
+    for (int i = 1; i < _segments.length; i++) {
+      final prev = _segments[i - 1];
+      final curr = _segments[i];
+      if (prev.rawPoints.isEmpty || curr.rawPoints.isEmpty) continue;
+      if (prev.isBus && curr.isBus) {
+        final pt = prev.rawPoints.last;
+        markers.add(Marker(
+          point: pt,
+          width: 28,
+          height: 28,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppConstants.fareAmber,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.transfer_within_a_station_rounded,
+              color: Colors.white,
+              size: 14,
+            ),
+          ),
+        ));
+      }
+    }
+    return markers;
+  }
+
+  List<Marker> _buildStopMarkers() {
+    final markers = <Marker>[];
+    for (final seg in _segments) {
+      for (int i = 0; i < seg.rawPoints.length; i++) {
+        final pt = seg.rawPoints[i];
+        if (_origin != null && pt == _origin) continue;
+        if (_destination != null && pt == _destination) continue;
+        final name = i < seg.names.length ? seg.names[i] : '';
+        markers.add(Marker(
+          point: pt,
+          width: 14,
+          height: 14,
+          child: GestureDetector(
+            onTap: () {
+              if (name.isNotEmpty && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      name,
+                      style: const TextStyle(fontFamily: AppConstants.fontBengali),
+                    ),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: seg.color, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
+      }
+    }
+    return markers;
   }
 
   Widget _buildInfoBar(JourneyResult result, bool isDark) {
@@ -393,16 +597,18 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ...result.busSegments.asMap().entries.map((e) {
+            final i = e.key;
             final seg = e.value;
+            final color = _busPalette[i % _busPalette.length];
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
+                    width: 10,
+                    height: 10,
                     decoration: BoxDecoration(
-                      color: seg.isAc ? AppConstants.primaryAccent : AppConstants.primaryGreen,
+                      color: color,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -412,7 +618,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          seg.busNameBn,
+                          '${i + 1}. ${seg.busNameBn}',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,

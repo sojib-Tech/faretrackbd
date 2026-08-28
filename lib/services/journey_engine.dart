@@ -631,18 +631,25 @@ class _JsonBusRouteAdapter extends BusRoute {
     required super.fareData,
   });
 
+  static const double _estimatedStopGapKm = 0.7;
+
   static BusRoute fromJson(DhakaBusRoute json) {
     final resolved = <_ResolvedCoord>[];
     double cumulative = 0;
+    StopCoordinate? lastKnown;
     for (final name in json.route) {
       final coord = DhakaBusRouteData.findStop(name);
-      if (coord != null && resolved.isNotEmpty) {
-        final prev = resolved.last.coord;
-        if (prev != null) {
+      if (coord != null) {
+        if (lastKnown != null) {
           cumulative += JourneyPlannerEngine.haversine(
-            prev.lat, prev.lng, coord.lat, coord.lng,
+            lastKnown.lat, lastKnown.lng, coord.lat, coord.lng,
           ) / 1000.0;
         }
+        lastKnown = coord;
+      } else {
+        // No coordinate available: keep the route distance strictly increasing
+        // with a conservative per-stop estimate so derived segments stay valid.
+        cumulative += _estimatedStopGapKm;
       }
       resolved.add(_ResolvedCoord(coord: coord, cumDist: cumulative));
     }
