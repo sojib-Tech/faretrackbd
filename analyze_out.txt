@@ -1,0 +1,279 @@
+Analyzing faretrackbd...                                        
+
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:13:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:20:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:26:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:33:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:39:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:46:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:52:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:59:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\animations\app_animations.dart:65:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme\dark_theme.dart:9:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme\dark_theme.dart:125:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme\light_theme.dart:9:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\theme\light_theme.dart:124:25 - prefer_const_constructors
+warning - Unused import: '../../services/email_service.dart' - lib\features\auth\auth_screen.dart:7:8 - unused_import
+   info - The private field _lastOtp could be 'final' - lib\features\auth\auth_screen.dart:31:10 - prefer_final_fields
+warning - The value of the field '_isOtpSent' isn't used - lib\features\auth\auth_screen.dart:34:8 - unused_field
+warning - The declaration '_handleGoogleSignIn' isn't referenced - lib\features\auth\auth_screen.dart:132:16 - unused_element
+warning - The declaration '_buildOtpDisplay' isn't referenced - lib\features\auth\auth_screen.dart:438:10 - unused_element
+warning - The declaration '_buildOtpField' isn't referenced - lib\features\auth\auth_screen.dart:481:10 - unused_element
+warning - The declaration '_buildGoogleButton' isn't referenced - lib\features\auth\auth_screen.dart:697:10 - unused_element
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\features\emergency\emergency_screen.dart:73:20 - unawaited_futures
+   info - Use 'const' with the constructor to improve performance - lib\features\emergency\emergency_screen.dart:167:13 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\features\emergency\emergency_screen.dart:167:27 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_detail_screen.dart:19:16 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_detail_screen.dart:21:18 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_detail_screen.dart:158:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:46:16 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:48:18 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:78:23 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:79:34 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:93:23 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:94:34 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:108:23 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:109:34 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:225:22 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\features\history\history_screen.dart:227:27 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:228:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:230:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:232:28 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:255:16 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:293:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:295:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:313:16 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:343:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:345:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:384:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:401:24 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:403:26 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\history\history_screen.dart:478:30 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:242:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:244:24 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:282:11 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:400:22 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\features\home\home_screen.dart:401:27 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:402:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:404:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:406:28 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:433:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:435:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:499:34 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:501:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:520:34 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:522:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:574:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:577:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\home_screen.dart:960:16 - prefer_const_constructors
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\features\home\home_screen.dart:993:20 - unawaited_futures
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\home\home_screen.dart:996:7 - use_build_context_synchronously
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\features\home\home_screen.dart:996:15 - unawaited_futures
+   info - Use 'const' with the constructor to improve performance - lib\features\home\widgets\fare_circle_widget.dart:128:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\widgets\fare_circle_widget.dart:145:22 - prefer_const_constructors
+warning - Unused import: '../../../core/utils/road_router.dart' - lib\features\journey\journey_results_screen.dart:9:8 - unused_import
+warning - The value of the field '_zones' isn't used - lib\features\map\full_map_screen.dart:35:19 - unused_field
+warning - The value of the field '_zonesLoaded' isn't used - lib\features\map\full_map_screen.dart:36:8 - unused_field
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\features\map\full_map_screen.dart:361:15 - unawaited_futures
+   info - Use 'const' with the constructor to improve performance - lib\features\map\full_map_screen.dart:393:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\map\full_map_screen.dart:395:22 - prefer_const_constructors
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\features\map\full_map_screen.dart:406:22 - unawaited_futures
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\features\map\full_map_screen.dart:407:7 - unawaited_futures
+   info - Use 'const' with the constructor to improve performance - lib\features\map\full_map_screen.dart:817:38 - prefer_const_constructors
+   info - Unnecessary use of multiple underscores - lib\features\map\full_map_screen.dart:950:39 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\map\full_map_screen.dart:1156:41 - unnecessary_underscores
+   info - Use 'const' with the constructor to improve performance - lib\features\map\full_map_screen.dart:1287:28 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\map\full_map_screen.dart:1289:30 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\onboarding_screen.dart:22:5 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\onboarding_screen.dart:29:5 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\onboarding_screen.dart:36:5 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\profile\profile_screen.dart:70:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\profile\profile_screen.dart:85:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\profile\profile_screen.dart:222:11 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\profile\profile_screen.dart:258:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\profile\profile_screen.dart:260:24 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\profile\profile_screen.dart:547:16 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\profile\profile_screen.dart:576:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\profile\profile_screen.dart:578:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:129:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:138:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:226:38 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:303:18 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:321:7 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:322:18 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:335:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:336:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:349:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\receipt\receipt_sheet.dart:350:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\routes\route_detail_screen.dart:213:17 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\routes\route_detail_screen.dart:213:37 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\routes\route_detail_screen.dart:226:26 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\routes\route_search_screen.dart:381:23 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\routes\route_search_screen.dart:488:34 - prefer_const_constructors
+   info - Unnecessary use of string interpolation - lib\features\routes\route_search_screen.dart:520:21 - unnecessary_string_interpolations
+   info - Use 'const' with the constructor to improve performance - lib\features\splash\splash_screen.dart:79:17 - prefer_const_constructors
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\providers\trip_provider.dart:236:18 - unawaited_futures
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\providers\trip_provider.dart:259:20 - unawaited_futures
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\screens\accident_map_screen.dart:43:21 - unawaited_futures
+   info - Unnecessary use of double quotes - lib\screens\ai_assistant_screen.dart:64:28 - prefer_single_quotes
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\screens\ai_assistant_screen.dart:133:22 - unawaited_futures
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\screens\ai_assistant_screen.dart:157:20 - unawaited_futures
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\screens\ai_assistant_screen.dart:183:7 - unawaited_futures
+   info - Unnecessary use of double quotes - lib\services\email_service.dart:48:25 - prefer_single_quotes
+   info - Don't invoke 'print' in production code - lib\services\email_service.dart:58:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\email_service.dart:62:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\email_service.dart:67:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\email_service.dart:71:5 - avoid_print
+   info - Statements in a for should be enclosed in a block - lib\services\gemini_service.dart:302:44 - curly_braces_in_flow_control_structures
+   info - Statements in a for should be enclosed in a block - lib\services\gemini_service.dart:307:43 - curly_braces_in_flow_control_structures
+   info - Use 'const' with the constructor to improve performance - lib\services\gemini_service.dart:430:14 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\services\gemini_service.dart:471:14 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\services\gemini_service.dart:476:14 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\services\gemini_service.dart:479:14 - prefer_const_constructors
+   info - Don't use 'BuildContext's across async gaps - lib\services\shake_sos_service.dart:51:23 - use_build_context_synchronously
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\services\shake_sos_service.dart:66:20 - unawaited_futures
+   info - Missing an 'await' for the 'Future' computed by this expression - lib\services\shake_sos_service.dart:68:20 - unawaited_futures
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\widgets\app_gradient.dart:60:17 - use_null_aware_elements
+   info - Use 'const' with the constructor to improve performance - lib\widgets\bus_search_delegate.dart:379:28 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\widgets\bus_search_delegate.dart:381:33 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\widgets\bus_search_delegate.dart:385:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\widgets\bus_search_delegate.dart:387:34 - prefer_const_constructors
+   info - Unnecessary use of multiple underscores - lib\widgets\bus_search_delegate.dart:429:43 - unnecessary_underscores
+   info - Use 'const' with the constructor to improve performance - lib\widgets\glass_card.dart:71:28 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\widgets\glass_card.dart:74:19 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\widgets\glass_card.dart:91:28 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\widgets\glass_card.dart:92:19 - prefer_const_literals_to_create_immutables
+   info - Don't invoke 'print' in production code - test\bus_fare_verify.dart:11:7 - avoid_print
+   info - Don't invoke 'print' in production code - test\bus_fare_verify.dart:18:9 - avoid_print
+   info - Don't invoke 'print' in production code - test\bus_fare_verify.dart:33:11 - avoid_print
+   info - Don't invoke 'print' in production code - test\bus_fare_verify.dart:91:5 - avoid_print
+   info - Don't invoke 'print' in production code - test\bus_fare_verify.dart:94:5 - avoid_print
+   info - Don't invoke 'print' in production code - test\bus_fare_verify.dart:102:5 - avoid_print
+   info - Don't invoke 'print' in production code - test\corridor_finder_test.dart:31:7 - avoid_print
+   info - Use 'const' with the constructor to improve performance - test\journey_engine_test.dart:7:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\journey_engine_test.dart:38:22 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\journey_engine_test.dart:72:22 - prefer_const_constructors
+   info - Don't invoke 'print' in production code - test\journey_planner_engine_test.dart:42:9 - avoid_print
+   info - Dangling library doc comment - tool\fix_fare_data.dart:1:1 - dangling_library_doc_comments
+   info - Can't use a relative path to import a library in 'lib' - tool\fix_fare_data.dart:5:8 - avoid_relative_lib_imports
+   info - Can't use a relative path to import a library in 'lib' - tool\fix_fare_data.dart:6:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:408:3 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:416:7 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:421:7 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:429:9 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:454:11 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:461:3 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:462:3 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:463:3 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:466:5 - avoid_print
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:469:5 - avoid_print
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:491:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:492:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:493:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:494:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:495:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:496:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:499:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:500:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:501:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:502:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:503:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:504:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:505:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:506:15 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:515:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:516:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:521:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:522:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:526:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:527:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:530:21 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:532:19 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:534:21 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:537:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\fix_fare_data.dart:538:17 - prefer_single_quotes
+   info - Don't invoke 'print' in production code - tool\fix_fare_data.dart:543:3 - avoid_print
+   info - Invalid use of a private type in a public API - tool\gen_all_routes.dart:104:12 - library_private_types_in_public_api
+   info - Invalid use of a private type in a public API - tool\gen_all_routes.dart:904:12 - library_private_types_in_public_api
+   info - Unnecessary use of string interpolation - tool\gen_all_routes.dart:1650:33 - unnecessary_string_interpolations
+   info - Unnecessary use of string interpolation - tool\gen_all_routes.dart:1654:41 - unnecessary_string_interpolations
+   info - Unnecessary use of string interpolation - tool\gen_all_routes.dart:1658:41 - unnecessary_string_interpolations
+   info - Use interpolation to compose strings and values - tool\gen_all_routes.dart:1730:17 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - tool\gen_all_routes.dart:1738:19 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - tool\gen_all_routes.dart:1744:17 - prefer_interpolation_to_compose_strings
+   info - Don't invoke 'print' in production code - tool\gen_all_routes.dart:1764:5 - avoid_print
+   info - Don't invoke 'print' in production code - tool\gen_all_routes.dart:1771:5 - avoid_print
+   info - Don't invoke 'print' in production code - tool\gen_all_routes.dart:1773:5 - avoid_print
+   info - Don't invoke 'print' in production code - tool\gen_all_routes.dart:1813:3 - avoid_print
+   info - Don't invoke 'print' in production code - tool\gen_all_routes.dart:1849:3 - avoid_print
+   info - Unnecessary use of string interpolation - tool\gen_all_routes.dart:1873:42 - unnecessary_string_interpolations
+   info - Unnecessary use of string interpolation - tool\gen_all_routes.dart:1903:50 - unnecessary_string_interpolations
+   info - Unnecessary use of string interpolation - tool\gen_all_routes.dart:1909:48 - unnecessary_string_interpolations
+   info - Don't invoke 'print' in production code - tool\gen_all_routes.dart:1922:5 - avoid_print
+   info - Unnecessary braces in a string interpolation - tool\gen_all_routes.dart:1937:27 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - tool\gen_all_routes.dart:1939:5 - avoid_print
+   info - Unnecessary braces in a string interpolation - tool\gen_all_routes.dart:1955:32 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - tool\gen_all_routes.dart:1957:5 - avoid_print
+   info - Dangling library doc comment - tool\gen_ddr_computed.dart:1:1 - dangling_library_doc_comments
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:46:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:47:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:53:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:54:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:55:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:56:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:57:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:58:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:59:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:60:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:61:17 - prefer_single_quotes
+   info - Unnecessary use of double quotes - tool\gen_ddr_computed.dart:62:17 - prefer_single_quotes
+   info - Don't invoke 'print' in production code - tool\gen_ddr_computed.dart:68:3 - avoid_print
+   info - Don't invoke 'print' in production code - tool\gen_ddr_computed.dart:109:3 - avoid_print
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:128:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:132:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:136:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:140:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:144:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:148:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:152:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:156:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:160:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:164:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:168:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:172:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:176:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:180:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:184:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:188:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:192:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:196:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:200:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:204:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:208:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:212:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:216:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:220:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:224:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:228:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:232:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:236:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:240:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:244:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:248:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:252:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:256:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:260:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:264:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:268:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:272:3 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tool\gen_ddr_computed.dart:276:3 - prefer_const_constructors
+   info - Don't invoke 'print' in production code - tool\verify_toll_formula.dart:14:3 - avoid_print
+   info - Unnecessary use of double quotes - tool\verify_toll_formula.dart:14:9 - prefer_single_quotes
+   info - Don't invoke 'print' in production code - tool\verify_toll_formula.dart:21:5 - avoid_print
+   info - Unnecessary use of double quotes - tool\verify_toll_formula.dart:21:11 - prefer_single_quotes
+   info - Don't invoke 'print' in production code - tool\verify_toll_formula.dart:23:19 - avoid_print
+   info - Unnecessary use of double quotes - tool\verify_toll_formula.dart:23:25 - prefer_single_quotes
+   info - Don't invoke 'print' in production code - tool\verify_toll_formula.dart:24:19 - avoid_print
+   info - Unnecessary use of double quotes - tool\verify_toll_formula.dart:24:25 - prefer_single_quotes
+
+275 issues found. (ran in 74.5s)

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../core/utils/root_navigator.dart';
 
 class ShakeSosService {
   static final FlutterLocalNotificationsPlugin _notif =
@@ -26,7 +27,7 @@ class ShakeSosService {
     await _notif.initialize(settings);
   }
 
-  static void start(BuildContext context) {
+  static void start() {
     if (_isActive) return;
     _isActive = true;
 
@@ -48,7 +49,7 @@ class ShakeSosService {
 
         if (_shakeCount >= _requiredShakes) {
           _shakeCount = 0;
-          _triggerSos(context);
+          _triggerSos();
         }
       }
     });
@@ -62,14 +63,16 @@ class ShakeSosService {
 
   static bool get isActive => _isActive;
 
-  static Future<void> _triggerSos(BuildContext context) async {
-    HapticFeedback.heavyImpact();
-    await Future.delayed(const Duration(milliseconds: 200));
-    HapticFeedback.heavyImpact();
+  static Future<void> _triggerSos() async {
+    final ctx = rootNavigatorKey.currentState?.context;
+    if (ctx == null) return;
 
-    if (context.mounted) {
-      _showCountdownDialog(context);
-    }
+    unawaited(HapticFeedback.heavyImpact());
+    await Future.delayed(const Duration(milliseconds: 200));
+    unawaited(HapticFeedback.heavyImpact());
+
+    if (!ctx.mounted) return;
+    _showCountdownDialog(ctx);
   }
 
   static void _showCountdownDialog(BuildContext context) {
@@ -156,9 +159,21 @@ class ShakeSosService {
   }
 
   static Future<void> _dial999() async {
-    final uri = Uri(scheme: 'tel', path: '999');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+    const uri = 'tel:999';
+    try {
+      final parsed = Uri.parse(uri);
+      if (await canLaunchUrl(parsed)) {
+        final launched = await launchUrl(
+          parsed,
+          mode: LaunchMode.externalApplication,
+        );
+        if (launched) return;
+      }
+      // Fallback: try the explicit tel launch on the dialer.
+      final fallback = Uri.parse('tel://999');
+      await launchUrl(fallback, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('ShakeSos _dial999 error: $e');
     }
   }
 }

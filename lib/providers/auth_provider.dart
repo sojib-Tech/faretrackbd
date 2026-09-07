@@ -68,10 +68,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
         }
         return;
       }
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .get();
+
+      DocumentSnapshot<Map<String, dynamic>>? doc;
+      try {
+        doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(firebaseUser.uid)
+            .get();
+      } on FirebaseException catch (e) {
+        // Couldn't load the profile (e.g. a stale session from an incomplete
+        // signup before security rules were active). Clear it so the user can
+        // sign in / sign up cleanly instead of being stuck on an error screen.
+        debugPrint('Auth _loadUser Firestore read failed: ${e.code} - $e');
+        await _clearStaleSession();
+        return;
+      }
+
       if (doc.exists) {
         final data = doc.data()!;
         state = AuthState(
@@ -86,15 +98,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return;
       }
+
+      // Auth account exists but no Firestore profile and no local profile:
+      // this is an orphaned account from an interrupted signup. Sign it out
+      // so the same email can be registered again cleanly.
       final localUser = await _storage.getCurrentUser();
       if (localUser != null) {
         state = AuthState(user: localUser);
       } else {
-        state = AuthState();
+        await _clearStaleSession();
       }
     } catch (e) {
       debugPrint('Auth _loadUser error: $e');
-      state = AuthState(error: 'Firebase লোড করতে ব্যর্থ: $e');
+      state = AuthState();
+    }
+  }
+
+  Future<void> _clearStaleSession() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+    try {
+      await _storage.clearCurrentUser();
+    } catch (_) {}
+    if (_storage.isGuestSession()) {
+      state = AuthState(isGuest: true);
+    } else {
+      state = AuthState();
     }
   }
 

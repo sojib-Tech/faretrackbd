@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
@@ -16,6 +17,7 @@ import 'services/storage_service.dart';
 import 'services/background_service.dart';
 import 'services/shake_sos_service.dart';
 import 'services/gemini_service.dart';
+import 'core/utils/root_navigator.dart';
 import 'data/bus_database.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -45,6 +47,7 @@ GoRouter _createRouter(Ref ref) {
   };
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     redirect: (context, state) {
       final authState = ref.read(authProvider);
@@ -257,9 +260,22 @@ Future<void> _deferredInit() async {
   } catch (_) {}
   try {
     unawaited(ShakeSosService.init().catchError((_) {}));
+    autoStartShakeSos();
     final bgService = BackgroundServiceManager();
     await bgService.init();
     await bgService.configureBackgroundService();
+  } catch (_) {}
+}
+
+void autoStartShakeSos() {
+  try {
+    if (ShakeSosService.isActive) return;
+    final prefs = SharedPreferences.getInstance();
+    prefs.then((p) {
+      if (p.getBool('shake_sos') ?? false) {
+        ShakeSosService.start();
+      }
+    });
   } catch (_) {}
 }
 

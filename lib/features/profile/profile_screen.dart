@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_constants.dart';
@@ -8,7 +7,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/user_model.dart';
-import '../../services/gemini_service.dart';
 import '../emergency/emergency_screen.dart';
 import '../../widgets/guest_guard.dart';
 import '../../widgets/glass_card.dart';
@@ -356,16 +354,6 @@ class ProfileScreen extends ConsumerWidget {
             },
           ),
           _buildDivider(isDark),
-          if (!isGuest) ...[
-            _buildMenuItem(
-              icon: Icons.key_rounded,
-              title: 'AI API Key',
-              color: const Color(0xFF9C27B0),
-              isDark: isDark,
-              onTap: () => _showApiKeyDialog(context),
-            ),
-            _buildDivider(isDark),
-          ],
           _buildMenuItem(
             icon: Icons.map_outlined,
             title: 'Accident Map',
@@ -581,137 +569,6 @@ class ProfileScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showApiKeyDialog(BuildContext context) {
-    final controller = TextEditingController(text: GeminiService.apiKey);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.key_rounded, size: 22, color: Color(0xFF9C27B0)),
-            SizedBox(width: 8),
-            Text('AI API Key',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'আপনার Gemini API Key দিন।',
-              style: TextStyle(
-                fontFamily: AppConstants.fontBengali,
-                color: Colors.grey[600],
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'API Key পেতে https://aistudio.google.com/apikey তে যান।',
-              style: TextStyle(
-                fontFamily: AppConstants.fontBengali,
-                color: Colors.grey[500],
-                fontSize: 11,
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: controller,
-              style: const TextStyle(fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'API Key',
-                hintStyle: TextStyle(
-                    color: Colors.grey[400], fontFamily: AppConstants.fontBengali),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.paste_rounded, size: 18),
-                  onPressed: () async {
-                    final data = await Clipboard.getData(Clipboard.kTextPlain);
-                    if (data?.text != null) {
-                      controller.text = data!.text!.trim();
-                    }
-                  },
-                ),
-              ),
-              maxLines: 1,
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: GeminiService.hasApiKey
-                    ? Colors.green.withValues(alpha: 0.08)
-                    : Colors.orange.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    GeminiService.hasApiKey
-                        ? Icons.check_circle_rounded
-                        : Icons.warning_amber_rounded,
-                    size: 16,
-                    color: GeminiService.hasApiKey ? Colors.green : Colors.orange,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    GeminiService.hasApiKey
-                        ? 'API Key সেট করা আছে'
-                        : 'কোনো API Key সেট করা নেই',
-                    style: TextStyle(
-                      fontFamily: AppConstants.fontBengali,
-                      fontSize: 12,
-                      color:
-                          GeminiService.hasApiKey ? Colors.green : Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              GeminiService.clearApiKey();
-              Navigator.pop(ctx);
-            },
-            child: Text('মুছুন',
-                style: TextStyle(
-                    fontFamily: AppConstants.fontBengali,
-                    color: Colors.red.shade400)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('বাতিল',
-                style: TextStyle(
-                    fontFamily: AppConstants.fontBengali,
-                    color: Colors.grey[500])),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final key = controller.text.trim();
-              if (key.isNotEmpty) {
-                await GeminiService.setApiKey(key);
-                if (ctx.mounted) Navigator.pop(ctx);
-              }
-            },
-            child: const Text('সংরক্ষণ'),
           ),
         ],
       ),

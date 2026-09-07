@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/email_service.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -27,12 +26,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
 
-  final _otpController = TextEditingController();
-  String _lastOtp = '';
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _isOtpSent = false;
-  bool _isOtpLoading = false;
 
   @override
   void initState() {
@@ -44,11 +39,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (mounted) {
-        setState(() {
-          _isOtpSent = false;
-          _isOtpLoading = false;
-          _otpController.clear();
-        });
+        setState(() {});
       }
     });
   }
@@ -61,7 +52,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _otpController.dispose();
+
     _nameFocus.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
@@ -114,7 +105,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     } catch (e, stack) {
       debugPrint('--- [UI CRASH]: $e');
       debugPrint('--- [UI CRASH] Stack: $stack');
-      setState(() => _isOtpLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -126,14 +116,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           ),
         );
       }
-    }
-  }
-
-  Future<void> _handleGoogleSignIn() async {
-    final success = await ref.read(authProvider.notifier).signInWithGoogle();
-    if (success && mounted) {
-      FocusScope.of(context).unfocus();
-      context.go('/home');
     }
   }
 
@@ -435,89 +417,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     );
   }
 
-  Widget _buildOtpDisplay() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: const Color(0xFF1D9E75).withValues(alpha: 0.1),
-        border: Border.all(
-          color: const Color(0xFF1D9E75).withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'আপনার OTP কোড',
-            style: GoogleFonts.poppins(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _lastOtp,
-            style: GoogleFonts.poppins(
-              color: const Color(0xFF1D9E75),
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 6,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '৫ মিনিটের মধ্যে ব্যবহার করুন',
-            style: GoogleFonts.poppins(
-              color: Colors.white.withValues(alpha: 0.4),
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOtpField() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: const Color(0xFFFFFFFF).withValues(alpha: 0.06),
-        border: Border.all(
-          color: const Color(0xFF7C3AED).withValues(alpha: 0.5),
-        ),
-      ),
-      child: TextField(
-        controller: _otpController,
-        style: GoogleFonts.poppins(
-          color: Colors.white,
-          fontSize: 20,
-          letterSpacing: 8,
-        ),
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 6,
-        enabled: !_isOtpLoading,
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: 'OTP দিন',
-          hintStyle: GoogleFonts.poppins(
-            color: const Color(0xFFFFFFFF).withValues(alpha: 0.25),
-            fontSize: 20,
-            letterSpacing: 8,
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          prefixIcon: Icon(
-            Icons.lock_outlined,
-            size: 20,
-            color: const Color(0xFF7C3AED).withValues(alpha: 0.7),
-          ),
-          counterText: '',
-        ),
-      ),
-    );
-  }
-
   Widget _buildField({
     required TextEditingController controller,
     required FocusNode focusNode,
@@ -691,10 +590,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   Widget _buildDivider() {
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildGoogleButton(bool isLoading) {
     return const SizedBox.shrink();
   }
 

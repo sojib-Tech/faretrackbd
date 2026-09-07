@@ -30,7 +30,7 @@ class _SosSettingsScreenState extends State<SosSettingsScreen> {
     setState(() => _shakeEnabled = val);
 
     if (val) {
-      ShakeSosService.start(context);
+      ShakeSosService.start();
     } else {
       ShakeSosService.stop();
     }

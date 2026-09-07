@@ -87,7 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     if (prefs.getBool('shake_sos') ?? false) {
-      ShakeSosService.start(context);
+      ShakeSosService.start();
     }
   }
 
