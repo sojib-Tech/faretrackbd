@@ -77,8 +77,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return;
       }
 
-      final tokenResult = await firebaseUser.getIdTokenResult();
-      if (tokenResult.claims?['admin'] == true) {
+      if (AdminService.isAdminEmail(firebaseUser.email)) {
         state = AuthState(isAdmin: true);
         return;
       }
@@ -100,6 +99,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       if (doc.exists) {
         final data = doc.data()!;
+        if (data['banned'] == true) {
+          await _clearStaleSession();
+          state = AuthState(error: 'এই অ্যাকাউন্টটি অ্যাডমিন বন্ধ করেছেন।');
+          return;
+        }
         state = AuthState(
           user: UserModel(
             id: firebaseUser.uid,
@@ -262,11 +266,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await AdminService.login(username: 'admin', password: password);
         state = AuthState(isAdmin: true);
         return true;
-      } catch (e) {
-        debugPrint('Admin login error: $e');
+      } on FirebaseAuthException catch (e) {
+        debugPrint('Admin login error: ${e.code}');
         state = state.copyWith(
           isLoading: false,
-          error: 'Admin লগইন ব্যর্থ হয়েছে। Firebase Functions চেক করুন।',
+          error:
+              'Firebase Console-এ admin@faretrackbd.local অ্যাকাউন্ট তৈরি করুন।',
         );
         return false;
       }
@@ -297,6 +302,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       UserModel user;
       if (doc.exists) {
         final data = doc.data()!;
+        if (data['banned'] == true) {
+          await FirebaseAuth.instance.signOut();
+          state = state.copyWith(
+            isLoading: false,
+            error: 'এই অ্যাকাউন্টটি অ্যাডমিন বন্ধ করেছেন।',
+          );
+          return false;
+        }
         user = UserModel(
           id: userCredential.user!.uid,
           email: email.trim(),
@@ -514,7 +527,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, error: msg);
       return false;
     } on PlatformException catch (e) {
-      debugPrint('Auth signInWithGoogle platform error: ${e.code}: ${e.message}');
+      debugPrint(
+        'Auth signInWithGoogle platform error: ${e.code}: ${e.message}',
+      );
       final message = e.code == 'sign_in_failed'
           ? 'Google সেটআপ অসম্পূর্ণ। Firebase Project Settings-এ SHA-1 যোগ করুন।'
           : 'Google সাইন ইন ব্যর্থ হয়েছে';
@@ -631,6 +646,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       UserModel user;
       if (doc.exists) {
         final data = doc.data()!;
+        if (data['banned'] == true) {
+          await FirebaseAuth.instance.signOut();
+          state = state.copyWith(
+            isLoading: false,
+            error: 'এই অ্যাকাউন্টটি অ্যাডমিন বন্ধ করেছেন।',
+          );
+          return false;
+        }
         user = UserModel(
           id: uid,
           email: email,

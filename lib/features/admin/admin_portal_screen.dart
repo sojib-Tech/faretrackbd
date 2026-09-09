@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/admin_service.dart';
 
@@ -21,10 +20,7 @@ class _AdminPortalScreenState extends State<AdminPortalScreen> {
 
   Future<AdminData> _loadData() async {
     if (!await AdminService.isCurrentUserAdmin()) {
-      if (mounted)
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) context.go('/auth');
-        });
+      if (mounted) context.go('/auth');
       throw StateError('Admin access required.');
     }
     final results = await Future.wait([
@@ -42,65 +38,65 @@ class _AdminPortalScreenState extends State<AdminPortalScreen> {
     await _dataFuture;
   }
 
+  Future<void> _setBanned(AdminProfile profile) async {
+    try {
+      await AdminService.setBanned(profile.id, !profile.banned);
+      await _reload();
+    } catch (_) {
+      _show('অ্যাকাউন্টের অবস্থা পরিবর্তন করা যায়নি');
+    }
+  }
+
   Future<void> _deleteProfile(AdminProfile profile) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete profile?'),
+        title: const Text('অ্যাকাউন্ট মুছবেন?'),
         content: Text(
-          'Delete ${profile.name.isEmpty ? profile.email : profile.name}?',
+          '${profile.name.isEmpty ? profile.email : profile.name}-এর প্রোফাইল ও ইতিহাস মুছে যাবে।',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('না'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('মুছুন'),
           ),
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
-
+    if (confirmed != true) return;
     try {
       await AdminService.deleteProfile(profile.id);
-      if (mounted) {
-        setState(() => _dataFuture = _loadData());
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profile deleted.')));
-      }
+      await _reload();
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not delete this profile.')),
-        );
-      }
+      _show('অ্যাকাউন্ট মুছে ফেলা যায়নি');
     }
   }
 
-  Future<void> _logout() async {
-    await AdminService.logout();
-    if (mounted) context.go('/auth');
+  void _show(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Portal'),
+        title: const Text('অ্যাডমিন প্যানেল'),
         actions: [
+          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
           IconButton(
-            tooltip: 'Refresh',
-            onPressed: _reload,
-            icon: const Icon(Icons.refresh),
-          ),
-          IconButton(
-            tooltip: 'Logout',
-            onPressed: _logout,
+            onPressed: () async {
+              await AdminService.logout();
+              if (!context.mounted) return;
+              context.go('/auth');
+            },
             icon: const Icon(Icons.logout),
           ),
         ],
@@ -113,75 +109,57 @@ class _AdminPortalScreenState extends State<AdminPortalScreen> {
           }
           if (snapshot.hasError) {
             return Center(
-              child: FilledButton.icon(
+              child: FilledButton(
                 onPressed: _reload,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Could not load profiles'),
+                child: const Text('আবার চেষ্টা করুন'),
               ),
             );
           }
-          final data = snapshot.data;
-          final profiles = data?.profiles ?? const <AdminProfile>[];
-          final historyByUser = <String, List<AdminHistoryRecord>>{};
-          for (final record in data?.history ?? const <AdminHistoryRecord>[]) {
-            historyByUser.putIfAbsent(record.userId, () => []).add(record);
+          final data = snapshot.data!;
+          final historyByUser = <String, int>{};
+          for (final record in data.history) {
+            historyByUser.update(
+              record.userId,
+              (value) => value + 1,
+              ifAbsent: () => 1,
+            );
           }
-          if (profiles.isEmpty) {
-            return const Center(child: Text('No profiles found.'));
+          if (data.profiles.isEmpty) {
+            return const Center(child: Text('কোনো ব্যবহারকারী নেই'));
           }
           return RefreshIndicator(
             onRefresh: _reload,
-            child: ListView.separated(
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: profiles.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemCount: data.profiles.length,
               itemBuilder: (context, index) {
-                final profile = profiles[index];
-                final history = historyByUser[profile.id] ?? const [];
-                final totalFare = history.fold<double>(
-                  0,
-                  (total, record) => total + record.trip.totalFare,
-                );
+                final profile = data.profiles[index];
                 return Card(
-                  child: ExpansionTile(
-                    leading: CircleAvatar(
-                      child: Text(
-                        profile.name.isNotEmpty
-                            ? profile.name.substring(0, 1).toUpperCase()
-                            : '?',
-                      ),
-                    ),
+                  child: ListTile(
                     title: Text(
-                      profile.name.isEmpty ? 'Unnamed profile' : profile.name,
+                      profile.name.isEmpty ? profile.email : profile.name,
                     ),
                     subtitle: Text(
-                      '${profile.email}\n'
-                      '${profile.authProvider} • ${history.length} trips • '
-                      '৳${totalFare.toStringAsFixed(2)}',
+                      '${profile.email}\nইতিহাস: ${historyByUser[profile.id] ?? 0}টি',
                     ),
-                    children: [
-                      for (final record in history)
-                        ListTile(
-                          dense: true,
-                          leading: const Icon(Icons.directions_bus_outlined),
-                          title: Text(record.trip.formattedFare),
-                          subtitle: Text(
-                            '${record.trip.formattedDate} • '
-                            '${record.trip.formattedDistance}',
-                          ),
+                    isThreeLine: true,
+                    leading: Icon(profile.banned ? Icons.block : Icons.person),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'ban') _setBanned(profile);
+                        if (value == 'delete') _deleteProfile(profile);
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: 'ban',
+                          child: Text(profile.banned ? 'আনব্যান' : 'ব্যান'),
                         ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          tooltip: 'Delete profile',
-                          onPressed: () => _deleteProfile(profile),
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                          ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text('ডেটা মুছুন'),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

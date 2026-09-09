@@ -1,4 +1,3 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/trip_model.dart';
@@ -8,6 +7,7 @@ class AdminProfile {
   final String name;
   final String email;
   final String authProvider;
+  final bool banned;
   final DateTime? createdAt;
 
   const AdminProfile({
@@ -15,6 +15,7 @@ class AdminProfile {
     required this.name,
     required this.email,
     required this.authProvider,
+    required this.banned,
     this.createdAt,
   });
 
@@ -24,6 +25,7 @@ class AdminProfile {
       name: data['name'] as String? ?? '',
       email: data['email'] as String? ?? '',
       authProvider: data['authProvider'] as String? ?? 'email',
+      banned: data['banned'] == true,
       createdAt: DateTime.tryParse(data['createdAt'] as String? ?? ''),
     );
   }
@@ -39,46 +41,72 @@ class AdminHistoryRecord {
 class AdminService {
   AdminService._();
 
-  static final _functions = FirebaseFunctions.instance;
+  static const adminEmail = 'admin@faretrackbd.local';
+  static final _firestore = FirebaseFirestore.instance;
+
+  static bool isAdminEmail(String? email) =>
+      email?.trim().toLowerCase() == adminEmail;
 
   static Future<void> login({
     required String username,
     required String password,
   }) async {
-    final result = await _functions.httpsCallable('adminLogin').call({
-      'username': username.trim(),
-      'password': password,
-    });
-    final token = result.data['token'] as String?;
-    if (token == null || token.isEmpty) {
-      throw FirebaseFunctionsException(
-        code: 'internal',
-        message: 'Admin token was not returned.',
-      );
+    if (username.trim().toLowerCase() != 'admin') {
+      throw FirebaseAuthException(code: 'invalid-credential');
     }
-    await FirebaseAuth.instance.signInWithCustomToken(token);
+    final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: adminEmail,
+      password: password,
+    );
+    await _firestore.collection('users').doc(credential.user!.uid).set({
+      'name': 'Administrator',
+      'email': adminEmail,
+      'role': 'admin',
+      'authProvider': 'email',
+      'createdAt': DateTime.now().toIso8601String(),
+    }, SetOptions(merge: true));
   }
 
   static Future<List<AdminProfile>> getProfiles() async {
-    final snapshot = await FirebaseFirestore.instance.collection('users').get();
+    final snapshot = await _firestore.collection('users').get();
     return snapshot.docs
+        .where((doc) => !isAdminEmail(doc.data()['email'] as String?))
         .map((doc) => AdminProfile.fromDocument(doc.id, doc.data()))
         .toList();
   }
 
   static Future<bool> isCurrentUserAdmin() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-    final result = await user.getIdTokenResult(true);
-    return result.claims?['admin'] == true;
+    return isAdminEmail(FirebaseAuth.instance.currentUser?.email);
+  }
+
+  static Future<void> setBanned(String uid, bool banned) async {
+    await _firestore.collection('users').doc(uid).update({'banned': banned});
   }
 
   static Future<void> deleteProfile(String uid) async {
-    await _functions.httpsCallable('adminDeleteProfile').call({'uid': uid});
+    final history = await _firestore
+        .collection('trip_history')
+        .where('userId', isEqualTo: uid)
+        .get();
+    if (history.docs.isEmpty) {
+      await _firestore.collection('users').doc(uid).delete();
+      return;
+    }
+    for (var start = 0; start < history.docs.length; start += 400) {
+      final batch = _firestore.batch();
+      final end = (start + 400).clamp(0, history.docs.length).toInt();
+      for (final doc in history.docs.sublist(start, end)) {
+        batch.delete(doc.reference);
+      }
+      if (start == 0) {
+        batch.delete(_firestore.collection('users').doc(uid));
+      }
+      await batch.commit();
+    }
   }
 
   static Future<List<AdminHistoryRecord>> getAllHistory() async {
-    final snapshot = await FirebaseFirestore.instance
+    final snapshot = await _firestore
         .collection('trip_history')
         .orderBy('startTime', descending: true)
         .get();

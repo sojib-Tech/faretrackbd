@@ -29,6 +29,7 @@ class TripState {
   final double currentFare;
   final double currentDistance;
   final List<GpsPoint> routePoints;
+  final String? historySyncError;
 
   TripState({
     this.currentTrip,
@@ -39,6 +40,7 @@ class TripState {
     this.currentFare = 0,
     this.currentDistance = 0,
     this.routePoints = const [],
+    this.historySyncError,
   });
 
   TripState copyWith({
@@ -50,6 +52,7 @@ class TripState {
     double? currentFare,
     double? currentDistance,
     List<GpsPoint>? routePoints,
+    String? historySyncError,
   }) {
     return TripState(
       currentTrip: currentTrip ?? this.currentTrip,
@@ -60,6 +63,7 @@ class TripState {
       currentFare: currentFare ?? this.currentFare,
       currentDistance: currentDistance ?? this.currentDistance,
       routePoints: routePoints ?? this.routePoints,
+      historySyncError: historySyncError ?? this.historySyncError,
     );
   }
 }
@@ -275,14 +279,21 @@ class TripNotifier extends StateNotifier<TripState> {
       trip.totalFare = state.currentFare;
       trip.jamDuration = Duration(seconds: _jamSeconds);
 
+      String? historySyncError;
       try {
         await _storage.addTrip(trip, userId: _userId);
         await _storage.clearActiveTrip();
-      } catch (_) {}
+      } catch (_) {
+        historySyncError =
+            'ক্লাউডে ইতিহাস সিঙ্ক হয়নি। আবার লগইন করলে চেষ্টা হবে।';
+      }
 
       final updatedTrips = [trip, ...state.trips]
         ..sort((a, b) => b.startTime.compareTo(a.startTime));
-      state = state.copyWith(trips: updatedTrips);
+      state = state.copyWith(
+        trips: updatedTrips,
+        historySyncError: historySyncError,
+      );
     }
 
     state = state.copyWith(

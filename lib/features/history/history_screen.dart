@@ -75,9 +75,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       else
                         const SizedBox(width: 18),
                       const SizedBox(width: 8),
-                      Text('তারিখ',
-                          style: TextStyle(
-                              fontFamily: AppConstants.fontBengali)),
+                      Text(
+                        'তারিখ',
+                        style: TextStyle(fontFamily: AppConstants.fontBengali),
+                      ),
                     ],
                   ),
                 ),
@@ -90,9 +91,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       else
                         const SizedBox(width: 18),
                       const SizedBox(width: 8),
-                      Text('ভাড়া',
-                          style: TextStyle(
-                              fontFamily: AppConstants.fontBengali)),
+                      Text(
+                        'ভাড়া',
+                        style: TextStyle(fontFamily: AppConstants.fontBengali),
+                      ),
                     ],
                   ),
                 ),
@@ -105,9 +107,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       else
                         const SizedBox(width: 18),
                       const SizedBox(width: 8),
-                      Text('দূরত্ব',
-                          style: TextStyle(
-                              fontFamily: AppConstants.fontBengali)),
+                      Text(
+                        'দূরত্ব',
+                        style: TextStyle(fontFamily: AppConstants.fontBengali),
+                      ),
                     ],
                   ),
                 ),
@@ -117,43 +120,78 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       ),
       body: tripState.isLoading && !_isRefreshing
           ? const Center(child: CircularProgressIndicator())
-          : trips.isEmpty
-              ? _buildEmptyState(isDark)
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    setState(() => _isRefreshing = true);
-                    await ref.read(tripProvider.notifier).refreshTrips();
-                    if (mounted) setState(() => _isRefreshing = false);
-                  },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: trips.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return _buildDeleteAllButton(isDark, trips.length);
-                      }
-                      final tripIndex = index - 1;
-                      return _TripCard(
-                        trip: trips[tripIndex],
-                        index: tripIndex,
-                        onDelete: () =>
-                            _deleteTrip(context, trips[tripIndex].id),
-                        onTap: () => context.push('/history/detail',
-                            extra: trips[tripIndex]),
-                      ).animate().slideX(
-                            begin: 0.3,
-                            end: 0,
-                            duration: 400.ms,
-                            delay: (tripIndex * 80).ms,
-                            curve: Curves.easeOutCubic,
-                          ).fadeIn(
-                            duration: 400.ms,
-                            delay: (tripIndex * 80).ms,
-                          );
-                    },
+          : Column(
+              children: [
+                if (tripState.historySyncError != null)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppConstants.warn.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      tripState.historySyncError!,
+                      style: const TextStyle(
+                        fontFamily: AppConstants.fontBengali,
+                        color: AppConstants.warn,
+                      ),
+                    ),
                   ),
+                Expanded(
+                  child: trips.isEmpty
+                      ? _buildEmptyState(isDark)
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            setState(() => _isRefreshing = true);
+                            await ref
+                                .read(tripProvider.notifier)
+                                .refreshTrips();
+                            if (mounted) setState(() => _isRefreshing = false);
+                          },
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: trips.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == 0) {
+                                return _buildDeleteAllButton(
+                                  isDark,
+                                  trips.length,
+                                );
+                              }
+                              final tripIndex = index - 1;
+                              return _TripCard(
+                                    trip: trips[tripIndex],
+                                    index: tripIndex,
+                                    onDelete: () => _deleteTrip(
+                                      context,
+                                      trips[tripIndex].id,
+                                    ),
+                                    onTap: () => context.push(
+                                      '/history/detail',
+                                      extra: trips[tripIndex],
+                                    ),
+                                  )
+                                  .animate()
+                                  .slideX(
+                                    begin: 0.3,
+                                    end: 0,
+                                    duration: 400.ms,
+                                    delay: (tripIndex * 80).ms,
+                                    curve: Curves.easeOutCubic,
+                                  )
+                                  .fadeIn(
+                                    duration: 400.ms,
+                                    delay: (tripIndex * 80).ms,
+                                  );
+                            },
+                          ),
+                        ),
                 ),
+              ],
+            ),
     );
   }
 
@@ -225,7 +263,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.delete_sweep_rounded, size: 14, color: AppConstants.errorRed),
+                  Icon(
+                    Icons.delete_sweep_rounded,
+                    size: 14,
+                    color: AppConstants.errorRed,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'সব মুছুন',
@@ -249,9 +291,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'সব মুছে ফেলবেন?',
           style: const TextStyle(fontFamily: AppConstants.fontBengali),
@@ -281,8 +321,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('সব যাত্রা মুছে ফেলা হয়েছে',
-                      style: TextStyle(fontFamily: AppConstants.fontBengali)),
+                  content: const Text(
+                    'সব যাত্রা মুছে ফেলা হয়েছে',
+                    style: TextStyle(fontFamily: AppConstants.fontBengali),
+                  ),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -307,9 +349,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           AppStrings.deleteConfirm,
           style: const TextStyle(fontFamily: AppConstants.fontBengali),
@@ -331,8 +371,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('মুছে ফেলা হয়েছে',
-                      style: TextStyle(fontFamily: AppConstants.fontBengali)),
+                  content: const Text(
+                    'মুছে ফেলা হয়েছে',
+                    style: TextStyle(fontFamily: AppConstants.fontBengali),
+                  ),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -376,39 +418,40 @@ class _TripCard extends StatelessWidget {
       direction: DismissDirection.endToStart,
       confirmDismiss: (_) async {
         return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Text(
-              AppStrings.deleteConfirm,
-              style: const TextStyle(fontFamily: AppConstants.fontBengali),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(
-                  AppStrings.deleteNo,
-                  style: TextStyle(
-                    fontFamily: AppConstants.fontBengali,
-                    color: Colors.grey[500],
-                  ),
+              context: context,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(
-                  AppStrings.deleteYes,
-                  style: TextStyle(
-                    fontFamily: AppConstants.fontBengali,
-                    color: AppConstants.errorRed,
-                  ),
+                title: Text(
+                  AppStrings.deleteConfirm,
+                  style: const TextStyle(fontFamily: AppConstants.fontBengali),
                 ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: Text(
+                      AppStrings.deleteNo,
+                      style: TextStyle(
+                        fontFamily: AppConstants.fontBengali,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: Text(
+                      AppStrings.deleteYes,
+                      style: TextStyle(
+                        fontFamily: AppConstants.fontBengali,
+                        color: AppConstants.errorRed,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ) ?? false;
+            ) ??
+            false;
       },
       onDismissed: (_) => onDelete(),
       background: Container(
@@ -421,13 +464,13 @@ class _TripCard extends StatelessWidget {
         ),
         child: const Icon(Icons.delete_rounded, color: Colors.white, size: 28),
       ),
-        child: GestureDetector(
-          onTap: onTap,
-          child: GlassCard(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            borderRadius: 16,
-            child: Row(
+      child: GestureDetector(
+        onTap: onTap,
+        child: GlassCard(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          borderRadius: 16,
+          child: Row(
             children: [
               Container(
                 width: 48,

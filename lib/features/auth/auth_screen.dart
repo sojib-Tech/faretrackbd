@@ -702,7 +702,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.white,
           side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
     );

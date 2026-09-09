@@ -77,8 +77,10 @@ class StorageService {
       for (final doc in remote.docs) {
         byId[doc.id] = TripModel.fromJson(doc.data());
       }
-      return byId.values.toList()
+      final mergedTrips = byId.values.toList()
         ..sort((a, b) => b.startTime.compareTo(a.startTime));
+      await saveTrips(mergedTrips, userId: userId);
+      return mergedTrips;
     } catch (_) {
       return localTrips;
     }
@@ -120,12 +122,12 @@ class StorageService {
     trips.insert(0, trip);
     await saveTrips(trips, userId: userId);
     if (userId != null) {
-      try {
-        await _firestore
-            .collection('trip_history')
-            .doc(trip.id)
-            .set(trip.toJson());
-      } catch (_) {}
+      // Keep the local copy, but let the caller know when cloud persistence
+      // fails so the next authenticated sync can retry it.
+      await _firestore
+          .collection('trip_history')
+          .doc(trip.id)
+          .set(trip.toJson());
     }
   }
 
