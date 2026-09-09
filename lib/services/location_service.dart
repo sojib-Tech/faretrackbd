@@ -32,8 +32,8 @@ class LocationService {
   }
 
   Stream<GpsPoint> startListening({
-    LocationAccuracy accuracy = LocationAccuracy.best,
-    int distanceFilter = 2,
+    LocationAccuracy accuracy = LocationAccuracy.bestForNavigation,
+    int distanceFilter = 1,
   }) {
     _listenerCount++;
 
@@ -43,11 +43,15 @@ class LocationService {
 
     _controller = StreamController<GpsPoint>.broadcast();
 
+    final locationSettings = AndroidSettings(
+      accuracy: accuracy,
+      distanceFilter: distanceFilter,
+      intervalDuration: const Duration(seconds: 1),
+      forceLocationManager: false,
+    );
+
     _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: LocationSettings(
-        accuracy: accuracy,
-        distanceFilter: distanceFilter,
-      ),
+      locationSettings: locationSettings,
     ).listen((position) {
       _controller!.add(GpsPoint(
         latitude: position.latitude,
@@ -85,8 +89,9 @@ class LocationService {
   Future<GpsPoint?> getCurrentLocation() async {
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
+        locationSettings: AndroidSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 0,
         ),
       );
       return GpsPoint(

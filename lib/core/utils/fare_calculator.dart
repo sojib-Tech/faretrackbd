@@ -4,17 +4,17 @@ import '../constants/app_strings.dart';
 ///
 /// [distanceInKm] is the travel distance in kilometers.
 /// [isMinibus] sets whether the vehicle is a minibus (default is false/standard bus).
-int calculateDhakaBusFare(double distanceInKm, {bool isMinibus = false}) {
+double calculateDhakaBusFare(double distanceInKm, {bool isMinibus = false}) {
   final double ratePerKm = isMinibus ? 2.43 : 2.53;
   final double minimumFare = isMinibus ? 8.0 : 10.0;
 
   double calculatedFare = distanceInKm * ratePerKm;
 
   if (calculatedFare < minimumFare) {
-    return minimumFare.round();
+    return minimumFare;
   }
 
-  return calculatedFare.round();
+  return FareCalculator.roundToTwo(calculatedFare);
 }
 
 class FareCalculator {
@@ -25,7 +25,7 @@ class FareCalculator {
     if (distanceKm < 0) {
       throw ArgumentError('Distance cannot be negative');
     }
-    return calculateDhakaBusFare(distanceKm, isMinibus: isMinibus).toDouble();
+    return calculateDhakaBusFare(distanceKm, isMinibus: isMinibus);
   }
 
   /// Calculate fare and return as string with BDT symbol

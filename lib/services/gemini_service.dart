@@ -1,6 +1,7 @@
 ﻿import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/bus_database.dart';
 import '../data/bus_route_data.dart';
@@ -310,12 +311,12 @@ class _LocalFaq {
   }
 }
 
-class GeminiService {
+class OpenRouterService {
   static String _apiKey = '';
-  static GenerativeModel? _model;
-  static const String _prefsKey = 'gemini_api_key';
+  static const String _prefsKey = 'openrouter_api_key';
   static const Duration _timeout = Duration(seconds: 15);
-
+  static const String _endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+  static const String _model = 'meta-llama/llama-3.2-3b-instruct:free';
   static const String _defaultApiKey = '';
 
   static String _buildSystemPrompt() {
@@ -381,7 +382,7 @@ class GeminiService {
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final savedKey = prefs.getString(_prefsKey) ?? '';
-    final envKey = const String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    final envKey = const String.fromEnvironment('OPENROUTER_API_KEY', defaultValue: '');
     final key = savedKey.isNotEmpty
         ? savedKey
         : envKey.isNotEmpty
@@ -395,19 +396,6 @@ class GeminiService {
     if (key.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey, key);
-      final prompt = _buildSystemPrompt();
-      _model = GenerativeModel(
-        model: 'gemini-2.0-flash',
-        apiKey: key,
-        systemInstruction: Content.system(prompt),
-        generationConfig: GenerationConfig(
-          temperature: 0.3,
-          maxOutputTokens: 300,
-          topP: 0.85,
-        ),
-      );
-    } else {
-      _model = null;
     }
   }
 
@@ -415,7 +403,6 @@ class GeminiService {
 
   static Future<void> clearApiKey() async {
     _apiKey = '';
-    _model = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsKey);
   }
@@ -424,68 +411,57 @@ class GeminiService {
     required String userMessage,
     required List<Map<String, String>> history,
   }) async {
-    if (_apiKey.isEmpty || _model == null) {
+    if (_apiKey.isEmpty) {
       final local = _LocalFaq.tryAnswer(userMessage);
       if (local != null) return ChatResult(local);
-      return ChatResult('দুঃখিত, API key সেট করা হয়নি। প্রোফাইল > AI API Key থেকে key বসান।', isError: true);
+      return ChatResult('OpenRouter API key সেট করা হয়নি। AI settings থেকে key দিন।', isError: true);
     }
 
     try {
       final localResult = _LocalFaq.tryAnswer(userMessage);
       final dbContext = _LocalFaq.searchContext(userMessage);
 
-      final List<Content> contents = [];
-
-      if (dbContext.isNotEmpty) {
-        contents.add(Content.text(
-          'Database context for this query:\n$dbContext',
-        ));
-      }
-
-      if (localResult != null) {
-        contents.add(Content.text(
-          'Our database has this exact answer. Read it carefully and use it to respond naturally in Bangla:\n$localResult',
-        ));
-      }
-
+      final messages = <Map<String, String>>[
+        {'role': 'system', 'content': '${_buildSystemPrompt()}\nDatabase context:\n$dbContext'},
+      ];
       for (final msg in history) {
         final text = msg['text'] ?? '';
-        if (text.isEmpty) continue;
-        if (msg['role'] == 'user') {
-          contents.add(Content.text(text));
-        } else {
-          contents.add(Content.model([TextPart(text)]));
+        if (text.isNotEmpty) {
+          messages.add({'role': msg['role'] == 'model' ? 'assistant' : 'user', 'content': text});
         }
       }
+      messages.add({'role': 'user', 'content': localResult == null ? userMessage : '$userMessage\nKnown answer: $localResult'});
 
-      contents.add(Content.text(userMessage));
+      final response = await http.post(
+        Uri.parse(_endpoint),
+        headers: {
+          'Authorization': 'Bearer $_apiKey',
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://faretrackbd.app',
+          'X-Title': 'FareTrack BD',
+        },
+        body: jsonEncode({'model': _model, 'messages': messages, 'temperature': 0.3, 'max_tokens': 300}),
+      ).timeout(_timeout);
 
-      final response = await _model!.generateContent(contents).timeout(_timeout);
-      final text = response.text;
-      if (text == null || text.isEmpty) {
+      if (response.statusCode == 401) {
+        return ChatResult('OpenRouter API key ভুল বা নিষ্ক্রিয়। AI settings থেকে নতুন key দিন।', isError: true);
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint('OpenRouter ${response.statusCode}: ${response.body}');
+        return ChatResult('AI সার্ভার এখন ব্যস্ত। একটু পরে আবার চেষ্টা করুন।', isError: true);
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final text = data['choices']?[0]?['message']?['content'] as String?;
+      if (text == null || text.trim().isEmpty) {
         return ChatResult(localResult ?? 'কোনো উত্তর পাওয়া যায়নি।');
       }
-      return ChatResult(text);
+      return ChatResult(text.trim());
     } on TimeoutException {
-      debugPrint('Gemini Timeout');
+      debugPrint('OpenRouter Timeout');
       return ChatResult('অনুরোধের সময় শেষ (১৫ সেকেন্ড)। আবার চেষ্টা করুন।', isError: true);
-    } on InvalidApiKey catch (e) {
-      debugPrint('Gemini InvalidApiKey: ${e.message}');
-      _model = null;
-      _apiKey = '';
-      return ChatResult('API key ভুল বা নিষ্ক্রিয়। প্রোফাইল > AI API Key থেকে নতুন key বসান।', isError: true);
-    } on UnsupportedUserLocation {
-      debugPrint('Gemini UnsupportedUserLocation');
-      return ChatResult('আপনার লোকেশন থেকে Gemini API ব্যবহার করা যায় না। VPN চালু করে দেখুন।', isError: true);
-    } on ServerException catch (e) {
-      debugPrint('Gemini ServerException: ${e.message}');
-      return ChatResult('Gemini সার্ভার সমস্যা:\n${e.message}', isError: true);
-    } on GenerativeAIException catch (e) {
-      debugPrint('Gemini GenerativeAIException: ${e.message}');
-      return ChatResult('Gemini API ত্রুটি:\n${e.message}', isError: true);
     } catch (e) {
-      debugPrint('Gemini unknown error: $e');
-      return ChatResult('দুঃখিত, কিছু সমস্যা হয়েছে।\n$e', isError: true);
+      debugPrint('OpenRouter error: $e');
+      return ChatResult('দুঃখিত, AI সংযোগে সমস্যা হয়েছে। আবার চেষ্টা করুন।', isError: true);
     }
   }
 }

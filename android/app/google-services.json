@@ -2,7 +2,7 @@
   "project_info": {
     "project_number": "680894620786",
     "project_id": "faretrackbd",
-    "storage_bucket": "faretrackbd.appspot.com"
+    "storage_bucket": "faretrackbd.firebasestorage.app"
   },
   "client": [
     {
@@ -12,11 +12,35 @@
           "package_name": "com.faretrackbd.app"
         }
       },
+      "oauth_client": [
+        {
+          "client_id": "680894620786-bn70c561940apm1obomidj8fq4jr0mat.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.faretrackbd.app",
+            "certificate_hash": "293fe9cd523eda769883af19b599281ab94da05e"
+          }
+        },
+        {
+          "client_id": "680894620786-gr147sb5625vaphtt37vrs14ilj35tfr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAVT0oorPNyXppM7YcmPtT9sdo1nVAwxek"
         }
-      ]
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "680894620786-gr147sb5625vaphtt37vrs14ilj35tfr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

@@ -38,24 +38,26 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    LinearGradient resolvedGradient = gradient ??
+    LinearGradient resolvedGradient =
+        gradient ??
         LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             isDark
                 ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white.withValues(alpha: 0.72),
+                : Colors.white.withValues(alpha: 0.96),
             isDark
                 ? Colors.white.withValues(alpha: 0.03)
-                : Colors.white.withValues(alpha: 0.5),
+                : const Color(0xFFF8FAFD),
           ],
         );
     Color borderColor = isDark
         ? Colors.white.withValues(alpha: 0.12)
-        : Colors.white.withValues(alpha: 0.55);
+        : const Color(0xFFD7DDE8);
     double borderWidth = 1.2;
-    List<BoxShadow> resolvedShadow = boxShadow ??
+    List<BoxShadow> resolvedShadow =
+        boxShadow ??
         [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
@@ -71,10 +73,7 @@ class GlassCard extends StatelessWidget {
         resolvedGradient = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppConstants.glassDarkFill,
-            AppConstants.glassDarkFill,
-          ],
+          colors: [AppConstants.glassDarkFill, AppConstants.glassDarkFill],
         );
         borderColor = Colors.white.withValues(alpha: 0.12);
         resolvedShadow = const [

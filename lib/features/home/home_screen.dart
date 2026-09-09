@@ -35,6 +35,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   late AnimationController _pulseController;
   late AnimationController _holdController;
   bool _isHolding = false;
+  bool _routeOpening = false;
+
+  Future<void> _openRoute(String path, {Object? extra}) async {
+    if (_routeOpening || !mounted) return;
+    _routeOpening = true;
+    try {
+      await context.push(path, extra: extra);
+    } finally {
+      _routeOpening = false;
+    }
+  }
 
   @override
   void initState() {
@@ -101,7 +112,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final tripState = ref.read(tripProvider);
       if (tripState.isActive && tripState.currentTrip != null) {
         setState(() {
-          _displayElapsed = DateTime.now().difference(tripState.currentTrip!.startTime);
+          _displayElapsed = DateTime.now().difference(
+            tripState.currentTrip!.startTime,
+          );
         });
       }
     });
@@ -130,7 +143,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ? (tripState.currentFare / maxFare).clamp(0.0, 1.0)
         : 0.0;
 
-    final showGpsWarning = tripState.isActive &&
+    final showGpsWarning =
+        tripState.isActive &&
         locationState.accuracy > AppConstants.gpsMaxAccuracy &&
         locationState.accuracy > 0;
 
@@ -153,7 +167,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       const SizedBox(height: 20),
                       _buildDial(isDark, tripState, progress),
                       const SizedBox(height: 20),
-                      _buildStatusPills(isDark, elapsed, tripState, locationState),
+                      _buildStatusPills(
+                        isDark,
+                        elapsed,
+                        tripState,
+                        locationState,
+                      ),
                       const SizedBox(height: 24),
                       _buildCtaButton(isDark, tripState),
                       const SizedBox(height: 18),
@@ -192,7 +211,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               ],
             ),
-            child: const Center(child: Icon(Icons.directions_bus_rounded, color: Colors.white, size: 18)),
+            child: const Center(
+              child: Icon(
+                Icons.directions_bus_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           Text(
@@ -218,14 +243,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           _topIcon(Icons.history_rounded, () {
             guardRestrictedAction(context, ref);
             if (!ref.read(authProvider).isGuestMode) {
-              context.push('/history');
+              _openRoute('/history');
             }
           }),
-          _topIcon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-              () => ref.read(themeProvider.notifier).toggleTheme(),
-              isDark ? AppConstants.fareAmber : AppConstants.inkSoft),
+          _topIcon(
+            isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+            () => ref.read(themeProvider.notifier).toggleTheme(),
+            isDark ? AppConstants.fareAmber : AppConstants.inkSoft,
+          ),
           GestureDetector(
-            onTap: () => context.push('/sos-settings'),
+            onTap: () => _openRoute('/sos-settings'),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -263,8 +290,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       height: 34,
       child: IconButton(
         onPressed: onTap,
-        icon: Icon(icon, size: 18,
-            color: color ?? (isDark ? Colors.white70 : AppConstants.inkSoft)),
+        icon: Icon(
+          icon,
+          size: 18,
+          color: color ?? (isDark ? Colors.white70 : AppConstants.inkSoft),
+        ),
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
       ),
@@ -279,7 +309,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       color: AppConstants.amberSoft,
       child: Row(
         children: [
-          Icon(Icons.signal_wifi_off_rounded, size: 14, color: AppConstants.warn),
+          Icon(
+            Icons.signal_wifi_off_rounded,
+            size: 14,
+            color: AppConstants.warn,
+          ),
           const SizedBox(width: 6),
           Text(
             'GPS সংকেত দুর্বল: ${accuracy.toStringAsFixed(0)}মি',
@@ -328,14 +362,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: _searchMode == 0 ? AppConstants.primaryGreen : Colors.transparent,
+                  color: _searchMode == 0
+                      ? AppConstants.primaryGreen
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(9),
                   boxShadow: _searchMode == 0
-                      ? [BoxShadow(
-                          color: AppConstants.primaryGreen.withValues(alpha: 0.4),
-                          blurRadius: 8,
-                          spreadRadius: -3,
-                        )]
+                      ? [
+                          BoxShadow(
+                            color: AppConstants.primaryGreen.withValues(
+                              alpha: 0.4,
+                            ),
+                            blurRadius: 8,
+                            spreadRadius: -3,
+                          ),
+                        ]
                       : [],
                 ),
                 child: Text(
@@ -345,7 +385,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     fontFamily: AppConstants.fontBengali,
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: _searchMode == 0 ? Colors.white : AppConstants.inkSoft,
+                    color: _searchMode == 0
+                        ? Colors.white
+                        : AppConstants.inkSoft,
                   ),
                 ),
               ),
@@ -357,14 +399,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: _searchMode == 1 ? AppConstants.primaryGreen : Colors.transparent,
+                  color: _searchMode == 1
+                      ? AppConstants.primaryGreen
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(9),
                   boxShadow: _searchMode == 1
-                      ? [BoxShadow(
-                          color: AppConstants.primaryGreen.withValues(alpha: 0.4),
-                          blurRadius: 8,
-                          spreadRadius: -3,
-                        )]
+                      ? [
+                          BoxShadow(
+                            color: AppConstants.primaryGreen.withValues(
+                              alpha: 0.4,
+                            ),
+                            blurRadius: 8,
+                            spreadRadius: -3,
+                          ),
+                        ]
                       : [],
                 ),
                 child: Text(
@@ -374,7 +422,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     fontFamily: AppConstants.fontBengali,
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: _searchMode == 1 ? Colors.white : AppConstants.inkSoft,
+                    color: _searchMode == 1
+                        ? Colors.white
+                        : AppConstants.inkSoft,
                   ),
                 ),
               ),
@@ -390,7 +440,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       children: [
         Expanded(
           child: GestureDetector(
-            onTap: () => showSearch(context: context, delegate: BusSearchDelegate()),
+            onTap: () =>
+                showSearch(context: context, delegate: BusSearchDelegate()),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
@@ -399,7 +450,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               child: Row(
                 children: [
-                  Icon(Icons.search_rounded, size: 15, color: AppConstants.inkSoft),
+                  Icon(
+                    Icons.search_rounded,
+                    size: 15,
+                    color: AppConstants.inkSoft,
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     'বাস বা লোকেশন খুঁজুন...',
@@ -416,7 +471,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
         const SizedBox(width: 8),
         GestureDetector(
-          onTap: () => showSearch(context: context, delegate: BusSearchDelegate()),
+          onTap: () =>
+              showSearch(context: context, delegate: BusSearchDelegate()),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
@@ -463,19 +519,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   children: [
                     const SizedBox(height: 10),
                     Container(
-                      width: 8, height: 8,
+                      width: 8,
+                      height: 8,
                       decoration: const BoxDecoration(
-                        color: AppConstants.fareAmber, shape: BoxShape.circle,
+                        color: AppConstants.fareAmber,
+                        shape: BoxShape.circle,
                       ),
                     ),
                     Container(
-                      width: 1.5, height: 22,
+                      width: 1.5,
+                      height: 22,
                       color: AppConstants.cardLine,
                     ),
                     Container(
-                      width: 8, height: 8,
+                      width: 8,
+                      height: 8,
                       decoration: const BoxDecoration(
-                        color: AppConstants.primaryGreen, shape: BoxShape.circle,
+                        color: AppConstants.primaryGreen,
+                        shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -506,7 +567,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                         ),
                       ),
-                      Divider(height: 1, color: isDark ? Colors.white12 : AppConstants.cardLine),
+                      Divider(
+                        height: 1,
+                        color: isDark ? Colors.white12 : AppConstants.cardLine,
+                      ),
                       GestureDetector(
                         onTap: () => Navigator.push(
                           context,
@@ -536,13 +600,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: GestureDetector(
                     onTap: () {},
                     child: Container(
-                      width: 30, height: 30,
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
                         color: AppConstants.amberSoft,
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: const Center(
-                        child: Text('⇅', style: TextStyle(color: AppConstants.fareAmber, fontSize: 14)),
+                        child: Text(
+                          '⇅',
+                          style: TextStyle(
+                            color: AppConstants.fareAmber,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -595,11 +666,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _chip(chipBg, chipColor, Icons.access_time_rounded, 'মিরপুর → মতিঝিল'),
+          _chip(
+            chipBg,
+            chipColor,
+            Icons.access_time_rounded,
+            'মিরপুর → মতিঝিল',
+          ),
           const SizedBox(width: 6),
           _chip(chipBg, chipColor, Icons.star_rounded, 'বাড্ডা লিংক'),
           const SizedBox(width: 6),
-          _chip(chipBg, chipColor, Icons.access_time_rounded, 'উত্তরা → ফার্মগেট'),
+          _chip(
+            chipBg,
+            chipColor,
+            Icons.access_time_rounded,
+            'উত্তরা → ফার্মগেট',
+          ),
         ],
       ),
     );
@@ -647,7 +728,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         margin: const EdgeInsets.symmetric(vertical: 4),
         child: Center(
           child: AnimatedBuilder(
-            animation: _isHolding ? _holdController : const AlwaysStoppedAnimation(0),
+            animation: _isHolding
+                ? _holdController
+                : const AlwaysStoppedAnimation(0),
             builder: (context, _) {
               return SizedBox(
                 width: dialSize,
@@ -658,7 +741,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     isActive: isActive,
                     isDark: isDark,
                     holdProgress: _isHolding ? _holdController.value : 0,
-                    holdColor: isActive ? AppConstants.errorRed : AppConstants.primaryGreen,
+                    holdColor: isActive
+                        ? AppConstants.errorRed
+                        : AppConstants.primaryGreen,
                   ),
                   child: Stack(
                     alignment: Alignment.center,
@@ -675,7 +760,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppConstants.successGreen.withValues(alpha: 0.6),
+                                  color: AppConstants.successGreen.withValues(
+                                    alpha: 0.6,
+                                  ),
                                   blurRadius: 12,
                                   spreadRadius: 1,
                                 ),
@@ -696,10 +783,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: (isActive
-                                          ? AppConstants.primaryAccent
-                                          : AppConstants.primaryGreen)
-                                      .withValues(alpha: _isHolding ? 0.8 : 0.5),
+                                  color:
+                                      (isActive
+                                              ? AppConstants.primaryAccent
+                                              : AppConstants.primaryGreen)
+                                          .withValues(
+                                            alpha: _isHolding ? 0.8 : 0.5,
+                                          ),
                                   blurRadius: _isHolding ? 26 : 18,
                                   spreadRadius: _isHolding ? -4 : -6,
                                 ),
@@ -718,16 +808,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             _isHolding
                                 ? 'ধরে রাখুন...'
                                 : isActive
-                                    ? 'ভাড়া: ৳${tripState.currentFare.toStringAsFixed(1)}'
-                                    : 'যাত্রা শুরু করতে\nধরে রাখুন',
+                                ? 'ভাড়া: ৳${tripState.currentFare.toStringAsFixed(1)}'
+                                : 'যাত্রা শুরু করতে\nধরে রাখুন',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 13.5,
                               fontFamily: AppConstants.fontBengali,
                               color: _isHolding
-                                  ? (isActive ? AppConstants.errorRed : AppConstants.primaryGreen)
-                                  : (isDark ? Colors.white60 : AppConstants.inkSoft),
-                              fontWeight: _isHolding ? FontWeight.w700 : FontWeight.w500,
+                                  ? (isActive
+                                        ? AppConstants.errorRed
+                                        : AppConstants.primaryGreen)
+                                  : (isDark
+                                        ? Colors.white60
+                                        : AppConstants.inkSoft),
+                              fontWeight: _isHolding
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                               height: 1.5,
                             ),
                           ),
@@ -738,7 +834,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               style: TextStyle(
                                 fontSize: 11,
                                 fontFamily: AppConstants.fontBengali,
-                                color: isDark ? Colors.white38 : AppConstants.inkSoft,
+                                color: isDark
+                                    ? Colors.white38
+                                    : AppConstants.inkSoft,
                               ),
                             ),
                           ],
@@ -767,7 +865,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   // ── STATUS PILLS ──
   Widget _buildStatusPills(
-      bool isDark, Duration elapsed, TripState tripState, LocationState locationState) {
+    bool isDark,
+    Duration elapsed,
+    TripState tripState,
+    LocationState locationState,
+  ) {
     final isActive = tripState.isActive;
     return Row(
       children: [
@@ -783,12 +885,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         const SizedBox(width: 10),
         _statusCard(
           isDark: isDark,
-          ledColor: tripState.isJam ? AppConstants.warn : AppConstants.successGreen,
+          ledColor: tripState.isJam
+              ? AppConstants.warn
+              : AppConstants.successGreen,
           ledGlow: isActive && !tripState.isJam,
           label: 'অবস্থা',
-          value: isActive
-              ? (tripState.isJam ? 'জ্যাম' : 'চলছে')
-              : 'প্রস্তুত',
+          value: isActive ? (tripState.isJam ? 'জ্যাম' : 'চলছে') : 'প্রস্তুত',
           mono: false,
           highlight: isActive,
         ),
@@ -837,7 +939,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     color: ledColor,
                     shape: BoxShape.circle,
                     boxShadow: ledGlow
-                        ? [BoxShadow(color: ledColor.withValues(alpha: 0.4), blurRadius: 6, spreadRadius: 1)]
+                        ? [
+                            BoxShadow(
+                              color: ledColor.withValues(alpha: 0.4),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            ),
+                          ]
                         : [],
                   ),
                 ),
@@ -859,9 +967,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               style: TextStyle(
                 fontSize: 15.5,
                 fontWeight: FontWeight.w700,
-                fontFamily: mono ? AppConstants.fontEnglish : AppConstants.fontBengali,
+                fontFamily: mono
+                    ? AppConstants.fontEnglish
+                    : AppConstants.fontBengali,
                 color: highlight
-                    ? (isDark ? AppConstants.primaryAccent : AppConstants.primaryGreen)
+                    ? (isDark
+                          ? AppConstants.primaryAccent
+                          : AppConstants.primaryGreen)
                     : (isDark ? Colors.white70 : AppConstants.ink),
               ),
             ),
@@ -899,14 +1011,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: isActive
-                ? [AppConstants.errorRed, AppConstants.errorRed.withValues(alpha: 0.85)]
+                ? [
+                    AppConstants.errorRed,
+                    AppConstants.errorRed.withValues(alpha: 0.85),
+                  ]
                 : [AppConstants.primaryGreen, AppConstants.pineDeep],
           ),
           borderRadius: BorderRadius.circular(17),
           boxShadow: [
             BoxShadow(
-              color: (isActive ? AppConstants.errorRed : AppConstants.primaryGreen)
-                  .withValues(alpha: 0.5),
+              color:
+                  (isActive ? AppConstants.errorRed : AppConstants.primaryGreen)
+                      .withValues(alpha: 0.5),
               blurRadius: 24,
               spreadRadius: -12,
             ),
@@ -936,8 +1052,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               isStopping
                   ? 'থামানো হচ্ছে...'
                   : _isHolding
-                      ? (isActive ? 'যাত্রা শেষ করুন (${(_holdController.value * 3).toStringAsFixed(0)}s)' : 'যাত্রা শুরু করুন (${(_holdController.value * 3).toStringAsFixed(0)}s)')
-                      : (isActive ? 'যাত্রা শেষ করুন' : 'যাত্রা শুরু করুন'),
+                  ? (isActive
+                        ? 'যাত্রা শেষ করুন (${(_holdController.value * 3).toStringAsFixed(0)}s)'
+                        : 'যাত্রা শুরু করুন (${(_holdController.value * 3).toStringAsFixed(0)}s)')
+                  : (isActive ? 'যাত্রা শেষ করুন' : 'যাত্রা শুরু করুন'),
               style: const TextStyle(
                 fontFamily: AppConstants.fontBengali,
                 fontSize: 16.5,
@@ -972,8 +1090,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('না',
-                style: TextStyle(fontFamily: AppConstants.fontBengali, color: Colors.grey[500])),
+            child: Text(
+              'না',
+              style: TextStyle(
+                fontFamily: AppConstants.fontBengali,
+                color: Colors.grey[500],
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1044,7 +1167,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.map_rounded, size: 13, color: isDark ? Colors.white70 : AppConstants.ink),
+                        Icon(
+                          Icons.map_rounded,
+                          size: 13,
+                          color: isDark ? Colors.white70 : AppConstants.ink,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           hasRoute
@@ -1059,9 +1186,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       ],
                     ),
-                    Icon(Icons.arrow_forward_ios_rounded,
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
                       size: 14,
-                      color: isDark ? AppConstants.pineGlow : AppConstants.pineDeep,
+                      color: isDark
+                          ? AppConstants.pineGlow
+                          : AppConstants.pineDeep,
                     ),
                   ],
                 ),
@@ -1087,7 +1217,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.white,
         border: Border(
-          top: BorderSide(color: isDark ? Colors.white12 : AppConstants.cardLine),
+          top: BorderSide(
+            color: isDark ? Colors.white12 : AppConstants.cardLine,
+          ),
         ),
       ),
       child: SafeArea(
@@ -1099,7 +1231,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             children: items.map((item) {
               final isActive = item.$3 == _bottomNavIndex;
               return GestureDetector(
-                onTap: () {
+                onTap: () async {
+                  if (_routeOpening) return;
                   setState(() => _bottomNavIndex = item.$3);
                   switch (item.$3) {
                     case 0:
@@ -1108,16 +1241,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     case 1:
                       guardRestrictedAction(context, ref);
                       if (!ref.read(authProvider).isGuestMode) {
-                        context.push('/history');
+                        await _openRoute('/history');
                       }
                       break;
                     case 3:
-                      context.push('/map', extra: <dynamic>[]);
+                      await _openRoute('/map', extra: <dynamic>[]);
                       break;
                     case 4:
                       guardRestrictedAction(context, ref);
                       if (!ref.read(authProvider).isGuestMode) {
-                        context.push('/profile');
+                        await _openRoute('/profile');
                       }
                       break;
                   }
@@ -1135,7 +1268,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppConstants.primaryGreen.withValues(alpha: 0.5),
+                              color: AppConstants.primaryGreen.withValues(
+                                alpha: 0.5,
+                              ),
                               blurRadius: 18,
                               spreadRadius: -6,
                             ),
@@ -1146,9 +1281,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       )
                     else ...[
-                      Icon(item.$1, size: 19,
+                      Icon(
+                        item.$1,
+                        size: 19,
                         color: isActive
-                            ? (isDark ? AppConstants.primaryAccent : AppConstants.primaryGreen)
+                            ? (isDark
+                                  ? AppConstants.primaryAccent
+                                  : AppConstants.primaryGreen)
                             : (isDark ? Colors.white38 : AppConstants.inkSoft),
                       ),
                       const SizedBox(height: 3),
@@ -1159,8 +1298,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           fontFamily: AppConstants.fontBengali,
                           fontWeight: FontWeight.w600,
                           color: isActive
-                              ? (isDark ? AppConstants.primaryAccent : AppConstants.primaryGreen)
-                              : (isDark ? Colors.white38 : AppConstants.inkSoft),
+                              ? (isDark
+                                    ? AppConstants.primaryAccent
+                                    : AppConstants.primaryGreen)
+                              : (isDark
+                                    ? Colors.white38
+                                    : AppConstants.inkSoft),
                         ),
                       ),
                     ],
@@ -1201,8 +1344,16 @@ class _DialPainter extends CustomPainter {
       ..shader = RadialGradient(
         center: const Alignment(0.3, 0.25),
         colors: isDark
-            ? [const Color(0xFF2A2A2A), const Color(0xFF1A1A1A), const Color(0xFF111111)]
-            : [const Color(0xFFFFFFFF), const Color(0xFFEEF1E9), const Color(0xFFE4E7DD)],
+            ? [
+                const Color(0xFF2A2A2A),
+                const Color(0xFF1A1A1A),
+                const Color(0xFF111111),
+              ]
+            : [
+                const Color(0xFFFFFFFF),
+                const Color(0xFFEEF1E9),
+                const Color(0xFFE4E7DD),
+              ],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, bgPaint);
 
@@ -1289,19 +1440,28 @@ class _MapPathPainter extends CustomPainter {
     final path = Path()
       ..moveTo(0, size.height * 0.65)
       ..cubicTo(
-        size.width * 0.15, size.height * 0.5,
-        size.width * 0.25, size.height * 0.85,
-        size.width * 0.4, size.height * 0.55,
+        size.width * 0.15,
+        size.height * 0.5,
+        size.width * 0.25,
+        size.height * 0.85,
+        size.width * 0.4,
+        size.height * 0.55,
       )
       ..cubicTo(
-        size.width * 0.55, size.height * 0.3,
-        size.width * 0.65, size.height * 0.7,
-        size.width * 0.8, size.height * 0.4,
+        size.width * 0.55,
+        size.height * 0.3,
+        size.width * 0.65,
+        size.height * 0.7,
+        size.width * 0.8,
+        size.height * 0.4,
       )
       ..cubicTo(
-        size.width * 0.9, size.height * 0.25,
-        size.width * 0.95, size.height * 0.35,
-        size.width, size.height * 0.2,
+        size.width * 0.9,
+        size.height * 0.25,
+        size.width * 0.95,
+        size.height * 0.35,
+        size.width,
+        size.height * 0.2,
       );
 
     canvas.drawPath(path, pathPaint);

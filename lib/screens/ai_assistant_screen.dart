@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -39,7 +39,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     _initTts();
     _messages.add({
       'role': 'bot',
-      'text': 'আসসালামু আলাইকুম! আমি ট্র্যাকি \nঢাকার বাসের ভাড়া ও রুট নিয়ে যেকোনো প্রশ্ন করুন।\n\nচ্যাটে লিখুন বা মাইক্রোফোন বাটন ধরে বাংলায় বলুন ',
+      'text':
+          'আসসালামু আলাইকুম! আমি ট্র্যাকি \nঢাকার বাসের ভাড়া ও রুট নিয়ে যেকোনো প্রশ্ন করুন।\n\nচ্যাটে লিখুন বা মাইক্রোফোন বাটন ধরে বাংলায় বলুন ',
     });
   }
 
@@ -89,7 +90,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       final locales = await _speech.locales();
       final hasBn = locales.any((l) => l.localeId == 'bn_BD');
       if (!hasBn) {
-        _showSnackBar('বাংলা (বাংলাদেশ) স্পিচ রিকগনিশন এই ডিভাইসে নেই। ইংরেজিতে বললে বাংলায় লিখবে।');
+        _showSnackBar(
+          'বাংলা (বাংলাদেশ) স্পিচ রিকগনিশন এই ডিভাইসে নেই। ইংরেজিতে বললে বাংলায় লিখবে।',
+        );
       }
     }
   }
@@ -144,10 +147,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   void _showSnackBar(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.red.shade800,
-      ),
+      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade800),
     );
   }
 
@@ -163,7 +163,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     _scrollToBottom();
 
     try {
-      final result = await GeminiService.chat(
+      final result = await OpenRouterService.chat(
         userMessage: text,
         history: _history,
       );
@@ -185,7 +185,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       setState(() {
         _messages.add({
           'role': 'bot',
-          'text': 'দুঃখিত, এখন সংযোগ সমস্যা হচ্ছে। একটু পরে চেষ্টা করুন।'
+          'text': 'দুঃখিত, এখন সংযোগ সমস্যা হচ্ছে। একটু পরে চেষ্টা করুন।',
         });
         _loading = false;
       });
@@ -217,26 +217,39 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             CircleAvatar(
               radius: 16,
               backgroundColor: Color(0xFF1D9E75),
-              child: Text('ট্র',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+              child: Text(
+                'ট্র',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ট্র্যাকি AI',
-                    style:
-                        TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                Text('Powered by Gemini',
-                    style: TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(
+                  'ট্র্যাকি AI',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                Text(
+                  'Powered by Gemini',
+                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                ),
               ],
             ),
           ],
         ),
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Gemini API settings',
+            icon: const Icon(Icons.settings_outlined, size: 21),
+            onPressed: _showGeminiSettings,
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
           child: Container(height: 0.5, color: Colors.white12),
@@ -268,16 +281,18 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E1E1E),
                       borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: Colors.white12, width: 0.5),
+                      border: Border.all(color: Colors.white12, width: 0.5),
                     ),
-                    child: Text(_suggestions[i],
-                        style: const TextStyle(
-                            color: Colors.grey, fontSize: 12)),
+                    child: Text(
+                      _suggestions[i],
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                   ),
                 ),
               ),
@@ -286,6 +301,51 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _showGeminiSettings() async {
+    final controller = TextEditingController(text: OpenRouterService.apiKey);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('OpenRouter AI settings'),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'OpenRouter API key',
+            hintText: 'sk-or-v1-...',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await OpenRouterService.clearApiKey();
+              if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+            },
+            child: const Text('Clear'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final key = controller.text.trim();
+              if (key.isEmpty) return;
+               await OpenRouterService.setApiKey(key);
+              if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (saved == true && mounted) {
+      _showSnackBar('OpenRouter API key saved');
+    }
   }
 
   Widget _buildInputBar() {
@@ -308,7 +368,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
               onSubmitted: _send,
             ),
@@ -334,10 +396,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Icon(Icons.send_rounded,
-                      color: Colors.white, size: 20),
+                  : const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
             ),
           ),
         ],
@@ -369,11 +436,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
         ),
         child: _isListening
             ? const Icon(Icons.mic, color: Colors.white, size: 22)
-            : Icon(Icons.mic_none_rounded,
-                color: _speechAvailable
-                    ? Colors.white70
-                    : Colors.grey.shade600,
-                size: 22),
+            : Icon(
+                Icons.mic_none_rounded,
+                color: _speechAvailable ? Colors.white70 : Colors.grey.shade600,
+                size: 22,
+              ),
       ),
     );
   }
@@ -389,7 +456,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
         height: 44,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: _ttsEnabled ? const Color(0xFF1D9E75) : const Color(0xFF2A2A2A),
+          color: _ttsEnabled
+              ? const Color(0xFF1D9E75)
+              : const Color(0xFF2A2A2A),
         ),
         child: Icon(
           _ttsEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
@@ -409,9 +478,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
-          color: isUser
-              ? const Color(0xFF1D9E75)
-              : const Color(0xFF1E1E1E),
+          color: isUser ? const Color(0xFF1D9E75) : const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),

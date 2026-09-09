@@ -35,6 +35,7 @@ import 'screens/accident_map_screen.dart';
 import 'screens/sos_settings_screen.dart';
 import 'screens/email_screen.dart';
 import 'features/journey/journey_planner_screen.dart';
+import 'features/admin/admin_portal_screen.dart';
 
 GoRouter _createRouter(Ref ref) {
   const restrictedRoutes = {
@@ -70,24 +71,23 @@ GoRouter _createRouter(Ref ref) {
       ),
       GoRoute(
         path: '/onboarding',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const OnboardingScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const OnboardingScreen(), state),
       ),
       GoRoute(
         path: '/auth',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const AuthScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const AuthScreen(), state),
+      ),
+      GoRoute(
+        path: '/admin',
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const AdminPortalScreen(), state),
       ),
       GoRoute(
         path: '/home',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const HomeScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const HomeScreen(), state),
       ),
       GoRoute(
         path: '/map',
@@ -106,7 +106,8 @@ GoRouter _createRouter(Ref ref) {
         path: '/receipt',
         pageBuilder: (context, state) {
           final trip = state.extra;
-          if (trip is! TripModel) return _buildSlideTransition(const _ErrorRoute(), state);
+          if (trip is! TripModel)
+            return _buildSlideTransition(const _ErrorRoute(), state);
           return _buildSlideTransition(
             ReceiptSheet(trip: trip),
             state,
@@ -124,93 +125,74 @@ GoRouter _createRouter(Ref ref) {
       ),
       GoRoute(
         path: '/history',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const HistoryScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const HistoryScreen(), state),
       ),
       GoRoute(
         path: '/history/detail',
         pageBuilder: (context, state) {
           final trip = state.extra;
-          if (trip is! TripModel) return _buildSlideTransition(const _ErrorRoute(), state);
-          return _buildSlideTransition(
-            HistoryDetailScreen(trip: trip),
-            state,
-          );
+          if (trip is! TripModel)
+            return _buildSlideTransition(const _ErrorRoute(), state);
+          return _buildSlideTransition(HistoryDetailScreen(trip: trip), state);
         },
       ),
       GoRoute(
         path: '/routes',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const RouteListScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const RouteListScreen(), state),
       ),
       GoRoute(
         path: '/fare-calculator',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const FareCalculatorScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const FareCalculatorScreen(), state),
       ),
       GoRoute(
         path: '/ai-assistant',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const AiAssistantScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const AiAssistantScreen(), state),
       ),
       GoRoute(
         path: '/accident-map',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const AccidentMapScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const AccidentMapScreen(), state),
       ),
       GoRoute(
         path: '/sos-settings',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const SosSettingsScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const SosSettingsScreen(), state),
       ),
       GoRoute(
         path: '/email-verification',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const EmailScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const EmailScreen(), state),
       ),
       GoRoute(
         path: '/journey-planner',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          const JourneyPlannerScreen(),
-          state,
-        ),
+        pageBuilder: (context, state) =>
+            _buildSlideTransition(const JourneyPlannerScreen(), state),
       ),
     ],
   );
 }
 
-Page<Object> _buildSlideTransition(Widget child, GoRouterState state, {bool fromRight = true}) {
+Page<Object> _buildSlideTransition(
+  Widget child,
+  GoRouterState state, {
+  bool fromRight = true,
+}) {
   return CustomTransitionPage(
     key: state.pageKey,
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final begin = fromRight ? const Offset(1.0, 0.0) : const Offset(-1.0, 0.0);
+      final begin = fromRight
+          ? const Offset(1.0, 0.0)
+          : const Offset(-1.0, 0.0);
       return SlideTransition(
-        position: Tween<Offset>(
-          begin: begin,
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeInOutCubic,
-        )),
-        child: FadeTransition(
-          opacity: animation,
-          child: child,
+        position: Tween<Offset>(begin: begin, end: Offset.zero).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeInOutCubic),
         ),
+        child: FadeTransition(opacity: animation, child: child),
       );
     },
   );
@@ -223,9 +205,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  unawaited(SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]));
+  unawaited(
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]),
+  );
 
   try {
     await Firebase.initializeApp(
@@ -241,9 +223,7 @@ void main() async {
 
   runApp(
     ProviderScope(
-      overrides: [
-        storageServiceProvider.overrideWithValue(storage),
-      ],
+      overrides: [storageServiceProvider.overrideWithValue(storage)],
       child: const FareTrackApp(),
     ),
   );
@@ -256,7 +236,7 @@ Future<void> _deferredInit() async {
     await BusDatabase.initialize();
   } catch (_) {}
   try {
-    await GeminiService.init();
+    await OpenRouterService.init();
   } catch (_) {}
   try {
     unawaited(ShakeSosService.init().catchError((_) {}));
@@ -333,7 +313,7 @@ class _FareTrackAppState extends ConsumerState<FareTrackApp>
                       Color(0xFF1A0F2E),
                       Color(0xFF0A0612),
                     ]
-                  : const [Color(0xFFFBF9FF), Color(0xFFF1ECFB)],
+                  : const [Color(0xFFF4F6FA), Color(0xFFE8ECF3)],
             ),
           ),
           child: isDark
@@ -374,9 +354,7 @@ class _ErrorRoute extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
-      body: const Center(
-        child: Text('পৃষ্ঠাটি পাওয়া যায়নি'),
-      ),
+      body: const Center(child: Text('পৃষ্ঠাটি পাওয়া যায়নি')),
     );
   }
 }
@@ -410,9 +388,7 @@ class _GlowBlob extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color, color.withValues(alpha: 0)],
-          ),
+          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
         ),
       ),
     );

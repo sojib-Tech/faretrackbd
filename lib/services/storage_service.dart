@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/trip_model.dart';
 import '../models/user_model.dart';
 
@@ -11,18 +12,20 @@ class StorageService {
   static const _guestId = 'guest';
   static const _guestSessionKey = 'guest_session_active';
 
-  String _tripsKeyFor(String? userId) => '$_tripsKeyPrefix${userId ?? _guestId}';
+  String _tripsKeyFor(String? userId) =>
+      '$_tripsKeyPrefix${userId ?? _guestId}';
   static const _usersKey = 'user_';
   static const _currentUserIdKey = 'current_user_id';
 
   SharedPreferences? _prefs;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
 
   bool getIsDarkMode() {
-    return _prefs?.getBool(_themeKey) ?? false;
+    return _prefs?.getBool(_themeKey) ?? true;
   }
 
   Future<void> setDarkMode(bool value) async {
@@ -44,11 +47,41 @@ class StorageService {
   Future<List<TripModel>> getTrips({String? userId}) async {
     final key = _tripsKeyFor(userId);
     final json = _prefs?.getString(key);
-    if (json == null) return [];
-    final List<dynamic> decoded = jsonDecode(json);
-    return decoded
-        .map((e) => TripModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    var localTrips = <TripModel>[];
+    try {
+      final decoded = json == null ? const [] : jsonDecode(json);
+      if (decoded is List) {
+        // Keep the profile boundary explicit even though the preference key is
+        // already profile-specific. This protects against old or malformed data
+        // being shown under another signed-in profile.
+        localTrips = decoded
+            .whereType<Map<String, dynamic>>()
+            .map(TripModel.fromJson)
+            .where((trip) => trip.userId == userId)
+            .toList();
+      }
+    } catch (_) {
+      localTrips = [];
+    }
+
+    if (userId == null) return localTrips;
+
+    try {
+      final remote = await _firestore
+          .collection('trip_history')
+          .where('userId', isEqualTo: userId)
+          .get();
+      final byId = <String, TripModel>{
+        for (final trip in localTrips) trip.id: trip,
+      };
+      for (final doc in remote.docs) {
+        byId[doc.id] = TripModel.fromJson(doc.data());
+      }
+      return byId.values.toList()
+        ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    } catch (_) {
+      return localTrips;
+    }
   }
 
   Future<void> saveTrips(List<TripModel> trips, {String? userId}) async {
@@ -57,20 +90,71 @@ class StorageService {
     await _prefs?.setString(key, json);
   }
 
+  Future<void> syncTripsToCloud({required String userId}) async {
+    final json = _prefs?.getString(_tripsKeyFor(userId));
+    if (json == null) return;
+    try {
+      final decoded = jsonDecode(json);
+      if (decoded is! List) return;
+      final trips = decoded
+          .whereType<Map<String, dynamic>>()
+          .map(TripModel.fromJson)
+          .where((trip) => trip.userId == userId)
+          .toList();
+      for (var start = 0; start < trips.length; start += 400) {
+        final batch = _firestore.batch();
+        final end = (start + 400).clamp(0, trips.length).toInt();
+        for (final trip in trips.sublist(start, end)) {
+          batch.set(
+            _firestore.collection('trip_history').doc(trip.id),
+            trip.toJson(),
+          );
+        }
+        await batch.commit();
+      }
+    } catch (_) {}
+  }
+
   Future<void> addTrip(TripModel trip, {String? userId}) async {
     final trips = await getTrips(userId: userId);
     trips.insert(0, trip);
     await saveTrips(trips, userId: userId);
+    if (userId != null) {
+      try {
+        await _firestore
+            .collection('trip_history')
+            .doc(trip.id)
+            .set(trip.toJson());
+      } catch (_) {}
+    }
   }
 
   Future<void> deleteTrip(String tripId, {String? userId}) async {
     final trips = await getTrips(userId: userId);
     trips.removeWhere((t) => t.id == tripId);
     await saveTrips(trips, userId: userId);
+    if (userId != null) {
+      try {
+        await _firestore.collection('trip_history').doc(tripId).delete();
+      } catch (_) {}
+    }
   }
 
   Future<void> deleteAllTrips({String? userId}) async {
     await saveTrips([], userId: userId);
+    if (userId != null) {
+      try {
+        final snapshot = await _firestore
+            .collection('trip_history')
+            .where('userId', isEqualTo: userId)
+            .get();
+        final batch = _firestore.batch();
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      } catch (_) {}
+    }
   }
 
   Future<void> saveActiveTrip(TripModel trip) async {

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import '../models/user_model.dart';
 import '../services/storage_service.dart';
+import '../services/admin_service.dart';
 import '../firebase_options.dart';
 import 'storage_provider.dart';
 
@@ -20,12 +22,14 @@ class AuthState {
   final bool isLoading;
   final String? error;
   final bool isGuest;
+  final bool isAdmin;
 
   AuthState({
     this.user,
     this.isLoading = false,
     this.error,
     this.isGuest = false,
+    this.isAdmin = false,
   });
 
   AuthState copyWith({
@@ -33,12 +37,14 @@ class AuthState {
     bool? isLoading,
     String? error,
     bool? isGuest,
+    bool? isAdmin,
   }) {
     return AuthState(
       user: user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       isGuest: isGuest ?? this.isGuest,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 
@@ -47,6 +53,8 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
+  static const _googleWebClientId =
+      '680894620786-gr147sb5625vaphtt37vrs14ilj35tfr.apps.googleusercontent.com';
   final StorageService _storage;
 
   AuthNotifier(this._storage) : super(AuthState()) {
@@ -66,6 +74,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         } else {
           state = AuthState();
         }
+        return;
+      }
+
+      final tokenResult = await firebaseUser.getIdTokenResult();
+      if (tokenResult.claims?['admin'] == true) {
+        state = AuthState(isAdmin: true);
         return;
       }
 
@@ -93,7 +107,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
             name: data['name'] ?? '',
             photoURL: data['photoURL'] as String?,
             authProvider: data['authProvider'] as String? ?? 'email',
-            createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
+            createdAt:
+                DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
           ),
         );
         return;
@@ -162,13 +177,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
 
     if (!await _checkFirebaseInit()) {
-      state = state.copyWith(isLoading: false, error: 'Firebase সংযোগ ব্যর্থ। Firebase কনসোল চেক করুন।');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Firebase সংযোগ ব্যর্থ। Firebase কনসোল চেক করুন।',
+      );
       return false;
     }
 
     try {
       final userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email.trim(), password: password);
+          .createUserWithEmailAndPassword(
+            email: email.trim(),
+            password: password,
+          );
 
       final user = UserModel(
         id: userCredential.user!.uid,
@@ -178,10 +199,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         createdAt: DateTime.now(),
       );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.id)
-          .set({
+      await FirebaseFirestore.instance.collection('users').doc(user.id).set({
         'name': name.trim(),
         'email': email.trim(),
         'role': 'passenger',
@@ -190,11 +208,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       });
 
       await _storage.setCurrentUser(user);
+      await _storage.syncTripsToCloud(userId: user.id);
       state = AuthState(user: user);
       return true;
     } on FirebaseAuthException catch (e) {
       String msg;
-      debugPrint('Auth signUp FirebaseAuthException: code=${e.code}, message=${e.message}');
+      debugPrint(
+        'Auth signUp FirebaseAuthException: code=${e.code}, message=${e.message}',
+      );
       switch (e.code) {
         case 'email-already-in-use':
           msg = 'এই ইমেইলে ইতিমধ্যে একটি অ্যাকাউন্ট আছে';
@@ -224,7 +245,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     } catch (e) {
       debugPrint('Auth signUp error: $e');
-      state = state.copyWith(isLoading: false, error: 'রেজিস্ট্রেশন ব্যর্থ হয়েছে। নেটওয়ার্ক ও Firebase কনফিগ চেক করুন।');
+      state = state.copyWith(
+        isLoading: false,
+        error:
+            'রেজিস্ট্রেশন ব্যর্থ হয়েছে। নেটওয়ার্ক ও Firebase কনফিগ চেক করুন।',
+      );
       return false;
     }
   }
@@ -232,13 +257,31 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> logIn(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
 
+    if (email.trim().toLowerCase() == 'admin' && password == 'admin1234') {
+      try {
+        await AdminService.login(username: 'admin', password: password);
+        state = AuthState(isAdmin: true);
+        return true;
+      } catch (e) {
+        debugPrint('Admin login error: $e');
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Admin লগইন ব্যর্থ হয়েছে। Firebase Functions চেক করুন।',
+        );
+        return false;
+      }
+    }
+
     if (email.trim().isEmpty || password.isEmpty) {
       state = state.copyWith(isLoading: false, error: 'ইমেইল ও পাসওয়ার্ড দিন');
       return false;
     }
 
     if (!await _checkFirebaseInit()) {
-      state = state.copyWith(isLoading: false, error: 'Firebase সংযোগ ব্যর্থ। Firebase কনসোল চেক করুন।');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Firebase সংযোগ ব্যর্থ। Firebase কনসোল চেক করুন।',
+      );
       return false;
     }
 
@@ -260,7 +303,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
           name: data['name'] ?? '',
           photoURL: data['photoURL'] as String?,
           authProvider: data['authProvider'] as String? ?? 'email',
-          createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
+          createdAt:
+              DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
         );
       } else {
         user = UserModel(
@@ -273,11 +317,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       await _storage.setCurrentUser(user);
+      await _storage.syncTripsToCloud(userId: user.id);
       state = AuthState(user: user);
       return true;
     } on FirebaseAuthException catch (e) {
       String msg;
-      debugPrint('Auth logIn FirebaseAuthException: code=${e.code}, message=${e.message}');
+      debugPrint(
+        'Auth logIn FirebaseAuthException: code=${e.code}, message=${e.message}',
+      );
       switch (e.code) {
         case 'user-not-found':
         case 'invalid-credential':
@@ -309,7 +356,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     } catch (e) {
       debugPrint('Auth login error: $e');
-      state = state.copyWith(isLoading: false, error: 'লগইন ব্যর্থ হয়েছে। নেটওয়ার্ক ও Firebase কনফিগ চেক করুন।');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'লগইন ব্যর্থ হয়েছে। নেটওয়ার্ক ও Firebase কনফিগ চেক করুন।',
+      );
       return false;
     }
   }
@@ -374,9 +424,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   static String? _isValidPassword(String password) {
     if (password.length < 8) return 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে';
-    if (!RegExp(r'[A-Z]').hasMatch(password)) return 'পাসওয়ার্ডে কমপক্ষে ১টি বড় হাতের অক্ষর থাকতে হবে';
-    if (!RegExp(r'[a-z]').hasMatch(password)) return 'পাসওয়ার্ডে কমপক্ষে ১টি ছোট হাতের অক্ষর থাকতে হবে';
-    if (!RegExp(r'[0-9]').hasMatch(password)) return 'পাসওয়ার্ডে কমপক্ষে ১টি সংখ্যা থাকতে হবে';
+    if (!RegExp(r'[A-Z]').hasMatch(password))
+      return 'পাসওয়ার্ডে কমপক্ষে ১টি বড় হাতের অক্ষর থাকতে হবে';
+    if (!RegExp(r'[a-z]').hasMatch(password))
+      return 'পাসওয়ার্ডে কমপক্ষে ১টি ছোট হাতের অক্ষর থাকতে হবে';
+    if (!RegExp(r'[0-9]').hasMatch(password))
+      return 'পাসওয়ার্ডে কমপক্ষে ১টি সংখ্যা থাকতে হবে';
     if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) {
       return 'পাসওয়ার্ডে কমপক্ষে ১টি বিশেষ ক্যারেক্টার থাকতে হবে (!@#\$%^&* ইত্যাদি)';
     }
@@ -407,11 +460,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
 
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        serverClientId: _googleWebClientId,
+      );
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
-        state = state.copyWith(isLoading: false, error: 'Google সাইন ইন বাতিল করা হয়েছে');
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Google সাইন ইন বাতিল করা হয়েছে',
+        );
         return false;
       }
 
@@ -422,8 +480,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         idToken: googleAuth.idToken,
       );
 
-      final userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       final firebaseUser = userCredential.user!;
 
       return _handleSocialAuthUser(
@@ -454,6 +513,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       state = state.copyWith(isLoading: false, error: msg);
       return false;
+    } on PlatformException catch (e) {
+      debugPrint('Auth signInWithGoogle platform error: ${e.code}: ${e.message}');
+      final message = e.code == 'sign_in_failed'
+          ? 'Google সেটআপ অসম্পূর্ণ। Firebase Project Settings-এ SHA-1 যোগ করুন।'
+          : 'Google সাইন ইন ব্যর্থ হয়েছে';
+      state = state.copyWith(isLoading: false, error: message);
+      return false;
     } catch (e) {
       debugPrint('Auth signInWithGoogle error: $e');
       state = state.copyWith(
@@ -476,20 +542,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final LoginResult result = await FacebookAuth.i.login();
 
       if (result.status == LoginStatus.cancelled) {
-        state = state.copyWith(isLoading: false, error: 'Facebook সাইন ইন বাতিল করা হয়েছে');
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Facebook সাইন ইন বাতিল করা হয়েছে',
+        );
         return false;
       }
 
       if (result.status != LoginStatus.success || result.accessToken == null) {
-        state = state.copyWith(isLoading: false, error: 'Facebook সাইন ইন ব্যর্থ হয়েছে');
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Facebook সাইন ইন ব্যর্থ হয়েছে',
+        );
         return false;
       }
 
-      final OAuthCredential credential =
-          FacebookAuthProvider.credential(result.accessToken!.tokenString);
+      final OAuthCredential credential = FacebookAuthProvider.credential(
+        result.accessToken!.tokenString,
+      );
 
-      final userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       final firebaseUser = userCredential.user!;
 
       String name = firebaseUser.displayName ?? '';
@@ -586,6 +660,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       await _storage.setCurrentUser(user);
+      await _storage.syncTripsToCloud(userId: user.id);
       state = AuthState(user: user);
       return true;
     } catch (e) {
@@ -599,7 +674,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   bool _isValidEmail(String email) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-        .hasMatch(email.trim());
+    return RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(email.trim());
   }
 }

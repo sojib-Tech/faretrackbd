@@ -2,6 +2,16 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../core/constants/app_strings.dart';
 
+@pragma('vm:entry-point')
+void backgroundServiceOnStart(ServiceInstance service) {
+  BackgroundServiceManager.onStart(service);
+}
+
+@pragma('vm:entry-point')
+Future<bool> backgroundServiceOnIosBackground(ServiceInstance service) {
+  return BackgroundServiceManager.onIosBackground(service);
+}
+
 class BackgroundServiceManager {
   static final BackgroundServiceManager _instance =
       BackgroundServiceManager._();
@@ -46,7 +56,7 @@ class BackgroundServiceManager {
 
     await service.configure(
       androidConfiguration: AndroidConfiguration(
-        onStart: onStart,
+        onStart: backgroundServiceOnStart,
         autoStart: false,
         isForegroundMode: true,
         notificationChannelId: 'faretrack_channel',
@@ -56,8 +66,8 @@ class BackgroundServiceManager {
       ),
       iosConfiguration: IosConfiguration(
         autoStart: false,
-        onForeground: onStart,
-        onBackground: onIosBackground,
+        onForeground: backgroundServiceOnStart,
+        onBackground: backgroundServiceOnIosBackground,
       ),
     );
   }

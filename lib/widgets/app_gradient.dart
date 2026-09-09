@@ -21,12 +21,13 @@ class AppBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColors = gradient ??
+    final baseColors =
+        gradient ??
         (vibe
             ? AppConstants.heroGradient
             : (isDark
-                ? const [Color(0xFF140F22), Color(0xFF1B1430)]
-                : const [Color(0xFFFBF9FF), Color(0xFFF1ECFB)]));
+                  ? const [Color(0xFF140F22), Color(0xFF1B1430)]
+                  : const [Color(0xFFF4F6FA), Color(0xFFE8ECF3)]));
 
     return Container(
       decoration: BoxDecoration(
@@ -93,10 +94,7 @@ class _Blob extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         child: ClipOval(
           child: Container(
             decoration: BoxDecoration(
@@ -133,9 +131,7 @@ class GradientText extends StatelessWidget {
         begin: AppConstants.gradientBegin,
         end: AppConstants.gradientEnd,
         colors: colors,
-      ).createShader(
-        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-      ),
+      ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
       child: Text(
         text,
         textAlign: textAlign,

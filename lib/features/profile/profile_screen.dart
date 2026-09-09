@@ -55,10 +55,13 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark, UserModel? user, bool isGuest) {
-    final name = isGuest
-        ? 'Guest User'
-        : (user?.name ?? AppStrings.guestUser);
+  Widget _buildHeader(
+    BuildContext context,
+    bool isDark,
+    UserModel? user,
+    bool isGuest,
+  ) {
+    final name = isGuest ? 'Guest User' : (user?.name ?? AppStrings.guestUser);
     final email = user?.email;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
@@ -67,9 +70,7 @@ class ProfileScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: BoxDecoration(
         color: AppConstants.primaryGreen,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(28),
-        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
       child: Column(
         children: [
@@ -157,7 +158,11 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildStatsRow(
-      bool isDark, int tripCount, double totalKm, double totalFare) {
+    bool isDark,
+    int tripCount,
+    double totalKm,
+    double totalFare,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Row(
@@ -275,8 +280,13 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(IconData icon, String label, String value,
-      Color color, bool isDark) {
+  Widget _buildStatCard(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+    bool isDark,
+  ) {
     return GlassCard(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       borderRadius: 16,
@@ -308,8 +318,13 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMenuSection(BuildContext context, bool isDark,
-      WidgetRef ref, ThemeMode themeMode, bool isGuest) {
+  Widget _buildMenuSection(
+    BuildContext context,
+    bool isDark,
+    WidgetRef ref,
+    ThemeMode themeMode,
+    bool isGuest,
+  ) {
     return GlassCard(
       borderRadius: 16,
       child: Column(
@@ -334,7 +349,6 @@ class ProfileScreen extends ConsumerWidget {
               color: AppConstants.primaryAccent,
               isDark: isDark,
               onTap: () {
-                context.pop();
                 context.push('/history');
               },
             ),
@@ -348,7 +362,6 @@ class ProfileScreen extends ConsumerWidget {
             onTap: () {
               guardRestrictedAction(context, ref);
               if (!isGuest) {
-                context.pop();
                 context.push('/ai-assistant');
               }
             },
@@ -360,7 +373,6 @@ class ProfileScreen extends ConsumerWidget {
             color: const Color(0xFF378ADD),
             isDark: isDark,
             onTap: () {
-              context.pop();
               context.push('/accident-map');
             },
           ),
@@ -371,7 +383,6 @@ class ProfileScreen extends ConsumerWidget {
             color: Colors.redAccent,
             isDark: isDark,
             onTap: () {
-              context.pop();
               context.push('/sos-settings');
             },
           ),
@@ -486,11 +497,7 @@ class ProfileScreen extends ConsumerWidget {
               color: AppConstants.fareAmber.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: AppConstants.fareAmber,
-            ),
+            child: Icon(icon, size: 18, color: AppConstants.fareAmber),
           ),
           const SizedBox(width: 14),
           Text(
@@ -529,9 +536,7 @@ class ProfileScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           AppStrings.signOut,
           style: const TextStyle(fontFamily: AppConstants.fontBengali),
@@ -577,9 +582,18 @@ class ProfileScreen extends ConsumerWidget {
 
   String _formatDate(DateTime date) {
     final months = [
-      'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল',
-      'মে', 'জুন', 'জুলাই', 'আগস্ট',
-      'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+      'জানুয়ারি',
+      'ফেব্রুয়ারি',
+      'মার্চ',
+      'এপ্রিল',
+      'মে',
+      'জুন',
+      'জুলাই',
+      'আগস্ট',
+      'সেপ্টেম্বর',
+      'অক্টোবর',
+      'নভেম্বর',
+      'ডিসেম্বর',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

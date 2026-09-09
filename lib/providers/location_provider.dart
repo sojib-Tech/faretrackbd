@@ -70,7 +70,7 @@ class LocationNotifier extends StateNotifier<LocationState> {
   void startListening() {
     if (state.isListening) return;
 
-    final stream = _service.startListening(distanceFilter: 2);
+    final stream = _service.startListening(distanceFilter: 1);
     _subscription = stream.listen(_onPoint);
     state = state.copyWith(isListening: true);
   }
@@ -97,8 +97,13 @@ class LocationNotifier extends StateNotifier<LocationState> {
       msg = 'চলছে';
     }
 
+    final canUseRawFix = result.filteredPoint == null &&
+        result.statusMessage != 'GPS জাম্প' &&
+        point.accuracy <= AppConstants.gpsMaxAccuracy;
+
     state = state.copyWith(
-      currentPoint: result.filteredPoint ?? state.currentPoint,
+      currentPoint: result.filteredPoint ??
+          (canUseRawFix ? point : state.currentPoint),
       accuracy: point.accuracy,
       speed: point.speed,
       statusMessage: msg,

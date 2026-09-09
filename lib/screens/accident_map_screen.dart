@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/accident_service.dart';
 
@@ -12,9 +13,9 @@ class AccidentMapScreen extends StatefulWidget {
 }
 
 class _AccidentMapScreenState extends State<AccidentMapScreen> {
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
   Position? _currentPosition;
-  Set<Marker> _markers = {};
+  List<Marker> _markers = [];
   StreamSubscription? _sub;
   String _filter = 'All';
 
@@ -40,9 +41,7 @@ class _AccidentMapScreenState extends State<AccidentMapScreen> {
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
     setState(() => _currentPosition = pos);
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLng(LatLng(pos.latitude, pos.longitude)),
-    );
+    _mapController.move(LatLng(pos.latitude, pos.longitude), 15);
   }
 
   void _listenAccidents() {
@@ -58,23 +57,21 @@ class _AccidentMapScreenState extends State<AccidentMapScreen> {
         : reports.where((r) => r.severity == _filter).toList();
 
     final markers = filtered.map((r) {
-      final hue = r.severity == 'Critical'
-          ? BitmapDescriptor.hueRed
+      final color = r.severity == 'Critical'
+          ? Colors.red
           : r.severity == 'Major'
-              ? BitmapDescriptor.hueOrange
-              : BitmapDescriptor.hueYellow;
-
+              ? Colors.orange
+              : Colors.yellow.shade700;
       return Marker(
-        markerId: MarkerId(r.id),
-        position: LatLng(r.lat, r.lng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
-        infoWindow: InfoWindow(
-          title: '${r.severity} — ${r.location}',
-          snippet: _timeAgo(r.time),
+        point: LatLng(r.lat, r.lng),
+        width: 42,
+        height: 42,
+        child: GestureDetector(
           onTap: () => _showAccidentDetail(r),
+          child: Icon(Icons.warning_rounded, color: color, size: 34),
         ),
       );
-    }).toSet();
+    }).toList();
 
     setState(() => _markers = markers);
   }
@@ -340,17 +337,28 @@ class _AccidentMapScreenState extends State<AccidentMapScreen> {
           ),
         ),
       ),
-      body: GoogleMap(
-        initialCameraPosition: const CameraPosition(
-          target: LatLng(23.8041, 90.4152),
-          zoom: 12,
+      body: FlutterMap(
+        mapController: _mapController,
+        options: const MapOptions(
+          initialCenter: LatLng(23.8041, 90.4152),
+          initialZoom: 12,
         ),
-        onMapCreated: (c) => _mapController = c,
-        markers: _markers,
-        myLocationEnabled: true,
-        myLocationButtonEnabled: false,
-        mapType: MapType.normal,
-        zoomControlsEnabled: false,
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.faretrackbd.app',
+          ),
+          MarkerLayer(markers: _markers),
+          if (_currentPosition != null)
+            MarkerLayer(markers: [
+              Marker(
+                point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                width: 36,
+                height: 36,
+                child: const Icon(Icons.my_location, color: Colors.blue, size: 30),
+              ),
+            ]),
+        ],
       ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,

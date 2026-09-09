@@ -62,13 +62,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
   Future<void> _handleSignIn() async {
     FocusScope.of(context).unfocus();
-    final success = await ref.read(authProvider.notifier).logIn(
-          _emailController.text,
-          _passwordController.text,
-        );
+    final success = await ref
+        .read(authProvider.notifier)
+        .logIn(_emailController.text, _passwordController.text);
     if (success && mounted) {
       FocusScope.of(context).unfocus();
-      context.go('/home');
+      context.go(ref.read(authProvider).isAdmin ? '/admin' : '/home');
     }
   }
 
@@ -83,21 +82,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('সঠিক Email address দিন', textAlign: TextAlign.center),
+              content: const Text(
+                'সঠিক Email address দিন',
+                textAlign: TextAlign.center,
+              ),
               backgroundColor: Colors.red.shade800,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
         return;
       }
 
-      final success = await ref.read(authProvider.notifier).signUp(
-            _nameController.text,
-            email,
-            _passwordController.text,
-          );
+      final success = await ref
+          .read(authProvider.notifier)
+          .signUp(_nameController.text, email, _passwordController.text);
       if (success && mounted) {
         FocusScope.of(context).unfocus();
         context.go('/home');
@@ -108,10 +110,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ক্র্যাশ: ${e.toString()}', textAlign: TextAlign.center),
+            content: Text(
+              'ক্র্যাশ: ${e.toString()}',
+              textAlign: TextAlign.center,
+            ),
             backgroundColor: Colors.red.shade900,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             duration: const Duration(seconds: 10),
           ),
         );
@@ -132,11 +139,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1B0B2E),
-              Color(0xFF120A24),
-              Color(0xFF0A0612),
-            ],
+            colors: [Color(0xFF1B0B2E), Color(0xFF120A24), Color(0xFF0A0612)],
           ),
         ),
         child: Stack(
@@ -170,6 +173,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       const SizedBox(height: 16),
                       _buildDivider(),
                       const SizedBox(height: 16),
+                      _buildGoogleOption(authState),
+                      const SizedBox(height: 12),
                       _buildGuestOption(),
                     ],
                   ),
@@ -273,9 +278,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           gradient: LinearGradient(
             colors: isSelected
                 ? const [Color(0xFF7C3AED), Color(0xFF3B82F6)]
-                : const [Color(0xFF7C3AED), Color(0xFF3B82F6)]
-                    .map((c) => c.withValues(alpha: 0.0))
-                    .toList(),
+                : const [
+                    Color(0xFF7C3AED),
+                    Color(0xFF3B82F6),
+                  ].map((c) => c.withValues(alpha: 0.0)).toList(),
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -311,10 +317,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             begin: const Offset(0.03, 0),
             end: Offset.zero,
           ).animate(curved),
-          child: FadeTransition(
-            opacity: curved,
-            child: child,
-          ),
+          child: FadeTransition(opacity: curved, child: child),
         );
       },
       child: _tabController.index == 0
@@ -446,16 +449,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           border: InputBorder.none,
           hintText: hint,
           hintStyle: GoogleFonts.poppins(
-            color: const Color(0xFFFFFFFF).withValues(alpha: enabled ? 0.25 : 0.1),
+            color: const Color(
+              0xFFFFFFFF,
+            ).withValues(alpha: enabled ? 0.25 : 0.1),
             fontSize: 14,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           prefixIcon: Icon(
             icon,
             size: 20,
             color: (focusNode.hasFocus && enabled)
                 ? const Color(0xFF7C3AED).withValues(alpha: 0.7)
-                : const Color(0xFFFFFFFF).withValues(alpha: enabled ? 0.3 : 0.1),
+                : const Color(
+                    0xFFFFFFFF,
+                  ).withValues(alpha: enabled ? 0.3 : 0.1),
           ),
         ),
       ),
@@ -493,16 +503,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           border: InputBorder.none,
           hintText: hint,
           hintStyle: GoogleFonts.poppins(
-            color: const Color(0xFFFFFFFF).withValues(alpha: enabled ? 0.25 : 0.1),
+            color: const Color(
+              0xFFFFFFFF,
+            ).withValues(alpha: enabled ? 0.25 : 0.1),
             fontSize: 14,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           prefixIcon: Icon(
             Icons.lock_outlined,
             size: 20,
             color: (focusNode.hasFocus && enabled)
                 ? const Color(0xFF7C3AED).withValues(alpha: 0.7)
-                : const Color(0xFFFFFFFF).withValues(alpha: enabled ? 0.3 : 0.1),
+                : const Color(
+                    0xFFFFFFFF,
+                  ).withValues(alpha: enabled ? 0.3 : 0.1),
           ),
           suffixIcon: IconButton(
             icon: Icon(
@@ -598,7 +615,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       animation: _tabController,
       builder: (context, _) {
         return GestureDetector(
-          onTap: () => _tabController.animateTo(_tabController.index == 0 ? 1 : 0),
+          onTap: () =>
+              _tabController.animateTo(_tabController.index == 0 ? 1 : 0),
           child: RichText(
             text: TextSpan(
               style: GoogleFonts.poppins(
@@ -647,8 +665,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_outline_rounded,
-                size: 18, color: Colors.white.withValues(alpha: 0.6)),
+            Icon(
+              Icons.person_outline_rounded,
+              size: 18,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
             const SizedBox(width: 8),
             Text(
               'সাইন-ইন না করে চালু করুন',
@@ -659,6 +680,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    FocusScope.of(context).unfocus();
+    final success = await ref.read(authProvider.notifier).signInWithGoogle();
+    if (success && mounted) context.go('/home');
+  }
+
+  Widget _buildGoogleOption(AuthState authState) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: authState.isLoading ? null : _handleGoogleSignIn,
+        icon: const Icon(Icons.g_mobiledata_rounded, size: 26),
+        label: const Text('Google দিয়ে সাইন ইন করুন'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );
@@ -680,7 +724,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 content: const Text('Password reset email sent'),
                 backgroundColor: const Color(0xFF27AE60),
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 margin: const EdgeInsets.all(16),
               ),
             );
@@ -700,21 +746,46 @@ class _OrbPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
 
-    _drawOrb(canvas, paint, size, 0.2 + 0.12 * math.sin(value * 2 * math.pi),
-        0.15 + 0.1 * math.cos(value * 2 * math.pi * 0.7), 220,
-        const Color(0xFF7C3AED).withValues(alpha: 0.12));
+    _drawOrb(
+      canvas,
+      paint,
+      size,
+      0.2 + 0.12 * math.sin(value * 2 * math.pi),
+      0.15 + 0.1 * math.cos(value * 2 * math.pi * 0.7),
+      220,
+      const Color(0xFF7C3AED).withValues(alpha: 0.12),
+    );
 
-    _drawOrb(canvas, paint, size, 0.7 + 0.15 * math.cos(value * 2 * math.pi * 0.6),
-        0.6 + 0.12 * math.sin(value * 2 * math.pi * 0.8), 180,
-        const Color(0xFF3B82F6).withValues(alpha: 0.1));
+    _drawOrb(
+      canvas,
+      paint,
+      size,
+      0.7 + 0.15 * math.cos(value * 2 * math.pi * 0.6),
+      0.6 + 0.12 * math.sin(value * 2 * math.pi * 0.8),
+      180,
+      const Color(0xFF3B82F6).withValues(alpha: 0.1),
+    );
 
-    _drawOrb(canvas, paint, size, 0.5 + 0.1 * math.sin(value * 2 * math.pi * 0.5 + 1),
-        0.85 + 0.08 * math.cos(value * 2 * math.pi * 0.4), 140,
-        const Color(0xFF8B5CF6).withValues(alpha: 0.08));
+    _drawOrb(
+      canvas,
+      paint,
+      size,
+      0.5 + 0.1 * math.sin(value * 2 * math.pi * 0.5 + 1),
+      0.85 + 0.08 * math.cos(value * 2 * math.pi * 0.4),
+      140,
+      const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+    );
   }
 
-  void _drawOrb(Canvas canvas, Paint paint, Size size, double x, double y,
-      double diameter, Color color) {
+  void _drawOrb(
+    Canvas canvas,
+    Paint paint,
+    Size size,
+    double x,
+    double y,
+    double diameter,
+    Color color,
+  ) {
     paint.color = color;
     canvas.drawCircle(
       Offset(size.width * x, size.height * y),
@@ -747,9 +818,9 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
 
   Future<void> _sendReset() async {
     setState(() => _sending = true);
-    final error = await ref.read(authProvider.notifier).resetPassword(
-          widget.emailController.text,
-        );
+    final error = await ref
+        .read(authProvider.notifier)
+        .resetPassword(widget.emailController.text);
     setState(() => _sending = false);
     if (error == null) {
       widget.onSent();
@@ -759,7 +830,9 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
           content: Text(error),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -792,7 +865,11 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
                   colors: [Color(0xFF7C3AED), Color(0xFF3B82F6)],
                 ),
               ),
-              child: const Icon(Icons.lock_reset_rounded, color: Colors.white, size: 24),
+              child: const Icon(
+                Icons.lock_reset_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -834,9 +911,15 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
                     color: const Color(0xFFFFFFFF).withValues(alpha: 0.25),
                     fontSize: 14,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  prefixIcon: Icon(Icons.email_outlined, size: 20,
-                      color: const Color(0xFFFFFFFF).withValues(alpha: 0.4)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.email_outlined,
+                    size: 20,
+                    color: const Color(0xFFFFFFFF).withValues(alpha: 0.4),
+                  ),
                 ),
               ),
             ),
@@ -855,9 +938,11 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
                 ),
                 child: _sending
                     ? const SizedBox(
-                        width: 22, height: 22,
+                        width: 22,
+                        height: 22,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white,
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
                       )
                     : Text(

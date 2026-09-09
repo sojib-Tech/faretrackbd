@@ -11,17 +11,23 @@ final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
 class ThemeNotifier extends StateNotifier<ThemeMode> {
   final StorageService _storage;
 
-  ThemeNotifier(this._storage) : super(ThemeMode.dark);
-
-  void toggleTheme() {
-    final newMode =
-        state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    state = newMode;
-    _storage.setDarkMode(newMode == ThemeMode.dark);
+  ThemeNotifier(this._storage) : super(ThemeMode.dark) {
+    _loadTheme();
   }
 
-  void setTheme(ThemeMode mode) {
+  Future<void> _loadTheme() async {
+    final mode = _storage.getIsDarkMode() ? ThemeMode.dark : ThemeMode.light;
+    if (mounted) state = mode;
+  }
+
+  Future<void> toggleTheme() async {
+    final newMode = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    state = newMode;
+    await _storage.setDarkMode(newMode == ThemeMode.dark);
+  }
+
+  Future<void> setTheme(ThemeMode mode) async {
     state = mode;
-    _storage.setDarkMode(mode == ThemeMode.dark);
+    await _storage.setDarkMode(mode == ThemeMode.dark);
   }
 }

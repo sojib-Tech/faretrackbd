@@ -11,7 +11,7 @@ class LightTheme {
       secondary: AppConstants.primaryAccent,
       tertiary: AppConstants.fareAmber,
       error: AppConstants.errorRed,
-      surface: Colors.white,
+      surface: const Color(0xFFF7F8FC),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: AppConstants.ink,
@@ -88,7 +88,7 @@ class LightTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppConstants.glassRadius),
         ),
-        color: Colors.white.withValues(alpha: 0.72),
+        color: Colors.white,
       ),
 
       // AppBar
@@ -132,9 +132,7 @@ class LightTheme {
       // Snackbar
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

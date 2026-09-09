@@ -16,7 +16,6 @@ import '../../models/zone_model.dart';
 import '../../core/utils/road_router.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/trip_provider.dart';
-import '../home/widgets/bus_animated_marker.dart';
 
 class FullMapScreen extends ConsumerStatefulWidget {
   final List<GpsPoint>? routePoints;
@@ -430,8 +429,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _currentPosition ??
-                  const LatLng(23.8103, 90.4125),
+              initialCenter: _currentPosition ?? const LatLng(23.8103, 90.4125),
               initialZoom: 15,
             ),
             children: [
@@ -440,78 +438,51 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                 userAgentPackageName: 'com.faretrackbd.app',
               ),
               if (_zonePolygons.isNotEmpty)
-                PolygonLayer(
-                  hitNotifier: _zoneHitNotifier,
-                  polygons: _zonePolygons,
-                ),
-              if (_roadRoutePoints.isNotEmpty && widget.routePoints != null)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _roadRoutePoints,
-                      color: AppConstants.primaryGreen.withValues(alpha: 0.35),
-                      strokeWidth: 6,
-                    ),
-                  ],
-                ),
+                PolygonLayer(polygons: _zonePolygons),
+              if (_roadRoutePoints.length > 1 && widget.routePoints != null)
+                PolylineLayer(polylines: [
+                  Polyline(
+                    points: _roadRoutePoints,
+                    color: AppConstants.primaryGreen.withValues(alpha: 0.35),
+                    strokeWidth: 6,
+                  ),
+                ]),
               if (_routeLatLngs.length > 1)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _routeLatLngs,
-                      color: AppConstants.primaryAccent
-                          .withValues(alpha: 0.9),
-                      strokeWidth: 4,
-                      borderColor:
-                          Colors.white.withValues(alpha: 0.35),
-                      borderStrokeWidth: 1,
-                    ),
-                  ],
-                ),
+                PolylineLayer(polylines: [
+                  Polyline(
+                    points: _routeLatLngs,
+                    color: AppConstants.primaryAccent,
+                    strokeWidth: 4,
+                  ),
+                ]),
               if (_currentPosition != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _currentPosition!,
-                      width: 48,
-                      height: 48,
-                      child: isActive
-                          ? BusAnimatedMarker(
-                              heading: widget.routePoints != null &&
-                                      widget.routePoints!.length > 1
-                                  ? _calculateHeading(
-                                      widget.routePoints![
-                                          widget.routePoints!.length - 2],
-                                      widget.routePoints!.last,
-                                    )
-                                  : 0,
-                              size: 44,
-                            )
-                          : Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: Colors.white, width: 3),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.blue
-                                        .withValues(alpha: 0.4),
-                                    blurRadius: 12,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
+                MarkerLayer(markers: [
+                  Marker(
+                    point: _currentPosition!,
+                    width: 48,
+                    height: 48,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isActive ? AppConstants.primaryGreen : Colors.blue,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isActive ? Icons.navigation_rounded : Icons.my_location,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
-                  ],
-                ),
-              if (_stopMarkers.isNotEmpty)
-                MarkerLayer(
-                  markers: _stopMarkers,
-                ),
+                  ),
+                ]),
+              if (_stopMarkers.isNotEmpty) MarkerLayer(markers: _stopMarkers),
             ],
           ),
           if (isActive)
@@ -956,8 +927,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                   return GestureDetector(
                     onTap: () {
                       _showStopInfo(stop);
-                      _mapController.move(
-                          LatLng(stop.lat, stop.lng), 16);
+                      _mapController.move(LatLng(stop.lat, stop.lng), 16);
                     },
                     child: Container(
                       width: 110,
