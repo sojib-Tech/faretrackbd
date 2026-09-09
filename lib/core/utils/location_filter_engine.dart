@@ -39,14 +39,24 @@ class LocationFilterEngine {
       return point;
     }
 
-    final alpha = AppConstants.gpsSmoothingAlpha;
+    // Moving vehicles need less lag than a pedestrian, while poor fixes still
+    // benefit from smoothing.
+    final alpha = point.accuracy <= AppConstants.gpsExcellentAccuracy
+        ? 0.72
+        : point.speed >= AppConstants.speedMovingThreshold
+        ? 0.62
+        : AppConstants.gpsSmoothingAlpha;
     final speedAlpha = AppConstants.speedSmoothingAlpha;
     final headingAlpha = AppConstants.headingSmoothingAlpha;
 
     _smoothedLat = _smoothedLat + alpha * (point.latitude - _smoothedLat);
     _smoothedLng = _smoothedLng + alpha * (point.longitude - _smoothedLng);
-    _smoothedSpeed = _smoothedSpeed + speedAlpha * (point.speed - _smoothedSpeed);
-    _smoothedHeading = _smoothedHeading + headingAlpha * (point.heading - _smoothedHeading);
+    _smoothedSpeed =
+        _smoothedSpeed + speedAlpha * (point.speed - _smoothedSpeed);
+    var headingDelta = point.heading - _smoothedHeading;
+    if (headingDelta > 180) headingDelta -= 360;
+    if (headingDelta < -180) headingDelta += 360;
+    _smoothedHeading += headingAlpha * headingDelta;
 
     if (_smoothedHeading < 0) _smoothedHeading += 360;
     if (_smoothedHeading >= 360) _smoothedHeading -= 360;
@@ -100,7 +110,19 @@ class LocationFilterEngine {
       );
     }
 
-    if (distanceDelta > AppConstants.maxDistanceDelta) {
+    final secondsSinceLastFix =
+        smoothed.timestamp
+            .difference(_lastValidPoint!.timestamp)
+            .inMilliseconds /
+        1000;
+    final expectedTravel = max(
+      AppConstants.maxDistanceDelta,
+      max(smoothed.speed, _lastValidPoint!.speed) *
+          max(secondsSinceLastFix, 1) *
+          3,
+    );
+
+    if (distanceDelta > expectedTravel) {
       _lastValidPoint = smoothed;
       return LocationFilterResult(
         accepted: false,
@@ -147,7 +169,8 @@ class LocationFilterEngine {
     final deltaPhi = (lat2 - lat1) * pi / 180;
     final deltaLambda = (lon2 - lon1) * pi / 180;
 
-    final a = sin(deltaPhi / 2) * sin(deltaPhi / 2) +
+    final a =
+        sin(deltaPhi / 2) * sin(deltaPhi / 2) +
         cos(phi1) * cos(phi2) * sin(deltaLambda / 2) * sin(deltaLambda / 2);
 
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));

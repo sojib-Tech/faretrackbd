@@ -85,7 +85,7 @@ class TripNotifier extends StateNotifier<TripState> {
   static const int _maxRoutePoints = 500;
 
   TripNotifier(this._storage, this._locationNotifier, this._userId)
-      : super(TripState()) {
+    : super(TripState()) {
     _loadTrips();
   }
 
@@ -233,10 +233,7 @@ class TripNotifier extends StateNotifier<TripState> {
     }
 
     try {
-      _bgService.updateLocation(
-        distance: newDistance,
-        fare: fare,
-      );
+      _bgService.updateLocation(distance: newDistance, fare: fare);
     } catch (_) {}
   }
 
@@ -282,6 +279,10 @@ class TripNotifier extends StateNotifier<TripState> {
         await _storage.addTrip(trip, userId: _userId);
         await _storage.clearActiveTrip();
       } catch (_) {}
+
+      final updatedTrips = [trip, ...state.trips]
+        ..sort((a, b) => b.startTime.compareTo(a.startTime));
+      state = state.copyWith(trips: updatedTrips);
     }
 
     state = state.copyWith(

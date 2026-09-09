@@ -31,6 +31,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
   late MapController _mapController;
   List<LatLng> _routeLatLngs = [];
   LatLng? _currentPosition;
+  double _currentHeading = 0;
   List<DhakaZone> _zones = [];
   bool _zonesLoaded = false;
   final ValueNotifier<LayerHitResult<DhakaZone>?> _zoneHitNotifier =
@@ -43,6 +44,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
   List<Polygon> _zonePolygons = [];
   List<Marker> _stopMarkers = [];
   AnimationController? _followAnim;
+  AnimationController? _positionAnim;
+  LatLng? _positionAnimationStart;
+  LatLng? _positionAnimationEnd;
   late AnimationController _stopHoldController;
   bool _isStopHolding = false;
 
@@ -66,18 +70,24 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     _loadZones();
     _zoneHitNotifier.addListener(_onZoneHit);
 
+    ref.listenManual(locationProvider, (previous, next) {
+      if (next.currentPoint == null || !mounted) return;
+      _updateFromState();
+    });
+
     _updateTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final tripState = ref.read(tripProvider);
       if (tripState.isActive && tripState.currentTrip != null) {
-        final newElapsed = DateTime.now().difference(tripState.currentTrip!.startTime);
+        final newElapsed = DateTime.now().difference(
+          tripState.currentTrip!.startTime,
+        );
         if (newElapsed.inSeconds != _elapsed.inSeconds) {
           setState(() {
             _elapsed = newElapsed;
           });
         }
       }
-      _updateFromState();
     });
 
     _initLocation();
@@ -120,7 +130,8 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     const R = 6371.0;
     final dLat = (b.latitude - a.latitude) * pi / 180;
     final dLon = (b.longitude - a.longitude) * pi / 180;
-    final h = sin(dLat / 2) * sin(dLat / 2) +
+    final h =
+        sin(dLat / 2) * sin(dLat / 2) +
         cos(a.latitude * pi / 180) *
             cos(b.latitude * pi / 180) *
             sin(dLon / 2) *
@@ -134,38 +145,85 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     final locationState = ref.read(locationProvider);
     final isActive = tripState.isActive;
 
-    LatLng? newPos;
     if (isActive && tripState.routePoints.isNotEmpty) {
       _routeLatLngs = tripState.routePoints
           .map((p) => LatLng(p.latitude, p.longitude))
           .toList();
-      newPos = _routeLatLngs.last;
-    } else if (locationState.currentPoint != null) {
+    }
+
+    LatLng? newPos;
+    // Use the live location fix first. Trip state is intentionally throttled
+    // for persistence/fare updates and must not drive the marker.
+    if (locationState.currentPoint != null) {
+      _currentHeading = locationState.currentPoint!.heading;
       newPos = LatLng(
         locationState.currentPoint!.latitude,
         locationState.currentPoint!.longitude,
       );
+    } else if (isActive && _routeLatLngs.isNotEmpty) {
+      newPos = _routeLatLngs.last;
     }
 
     if (newPos == null) return;
 
     final firstFix = _currentPosition == null;
-    final moved = firstFix ||
+    final moved =
+        firstFix ||
         (_currentPosition!.latitude - newPos.latitude).abs() > 0.000004 ||
         (_currentPosition!.longitude - newPos.longitude).abs() > 0.000004;
 
-    _currentPosition = newPos;
-
-    if (firstFix && !_initialCenterDone) {
-      _initialCenterDone = true;
-      try {
-        _mapController.move(newPos, 15);
-      } catch (_) {}
-    } else if (moved) {
+    final previousPosition = _currentPosition;
+    if (firstFix) {
+      _currentPosition = newPos;
+      if (!_initialCenterDone) {
+        _initialCenterDone = true;
+        try {
+          _mapController.move(newPos, 15);
+        } catch (_) {}
+      }
+    } else if (moved && previousPosition != null) {
+      _animateMarker(previousPosition, newPos);
       _followCamera(newPos);
+    } else if (!moved) {
+      _currentPosition = newPos;
     }
 
     if (moved) _updateNearbyStops();
+  }
+
+  void _animateMarker(LatLng from, LatLng to) {
+    _positionAnim?.dispose();
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _positionAnim = controller;
+    _positionAnimationStart = from;
+    _positionAnimationEnd = to;
+    controller.addListener(() {
+      if (!mounted ||
+          _positionAnimationStart == null ||
+          _positionAnimationEnd == null) {
+        return;
+      }
+      final t = Curves.easeOut.transform(controller.value);
+      final start = _positionAnimationStart!;
+      final end = _positionAnimationEnd!;
+      setState(() {
+        _currentPosition = LatLng(
+          start.latitude + (end.latitude - start.latitude) * t,
+          start.longitude + (end.longitude - start.longitude) * t,
+        );
+      });
+    });
+    controller.forward().then((_) {
+      if (_positionAnim == controller) {
+        _positionAnim = null;
+        _positionAnimationStart = null;
+        _positionAnimationEnd = null;
+      }
+      controller.dispose();
+    });
   }
 
   void _followCamera(LatLng pos) {
@@ -201,10 +259,13 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
   void _updateNearbyStops() {
     if (_currentPosition == null) return;
     final allStops = StopCoordinates.all;
-    final withDistance = allStops.map((s) {
-      final d = _calcDistanceKm(_currentPosition!, LatLng(s.lat, s.lng));
-      return _StopWithDistance(stop: s, distanceKm: d);
-    }).where((sd) => sd.distanceKm <= 2.0).toList();
+    final withDistance = allStops
+        .map((s) {
+          final d = _calcDistanceKm(_currentPosition!, LatLng(s.lat, s.lng));
+          return _StopWithDistance(stop: s, distanceKm: d);
+        })
+        .where((sd) => sd.distanceKm <= 2.0)
+        .toList();
     withDistance.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
     final stops = withDistance.map((sd) => sd.stop).toList();
 
@@ -322,6 +383,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
   void dispose() {
     _updateTimer?.cancel();
     _followAnim?.dispose();
+    _positionAnim?.dispose();
     _zoneHitNotifier.removeListener(_onZoneHit);
     _zoneHitNotifier.dispose();
     _stopHoldController.dispose();
@@ -365,8 +427,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'যাত্রা শেষ করবেন?',
           style: TextStyle(fontFamily: AppConstants.fontBengali),
@@ -382,10 +443,13 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('না',
-                style: TextStyle(
-                    fontFamily: AppConstants.fontBengali,
-                    color: Colors.grey[500])),
+            child: Text(
+              'না',
+              style: TextStyle(
+                fontFamily: AppConstants.fontBengali,
+                color: Colors.grey[500],
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -440,48 +504,61 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
               if (_zonePolygons.isNotEmpty)
                 PolygonLayer(polygons: _zonePolygons),
               if (_roadRoutePoints.length > 1 && widget.routePoints != null)
-                PolylineLayer(polylines: [
-                  Polyline(
-                    points: _roadRoutePoints,
-                    color: AppConstants.primaryGreen.withValues(alpha: 0.35),
-                    strokeWidth: 6,
-                  ),
-                ]),
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: _roadRoutePoints,
+                      color: AppConstants.primaryGreen.withValues(alpha: 0.35),
+                      strokeWidth: 6,
+                    ),
+                  ],
+                ),
               if (_routeLatLngs.length > 1)
-                PolylineLayer(polylines: [
-                  Polyline(
-                    points: _routeLatLngs,
-                    color: AppConstants.primaryAccent,
-                    strokeWidth: 4,
-                  ),
-                ]),
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: _routeLatLngs,
+                      color: AppConstants.primaryAccent,
+                      strokeWidth: 4,
+                    ),
+                  ],
+                ),
               if (_currentPosition != null)
-                MarkerLayer(markers: [
-                  Marker(
-                    point: _currentPosition!,
-                    width: 48,
-                    height: 48,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isActive ? AppConstants.primaryGreen : Colors.blue,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.withValues(alpha: 0.35),
-                            blurRadius: 12,
-                            spreadRadius: 2,
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _currentPosition!,
+                      width: 48,
+                      height: 48,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? AppConstants.primaryGreen
+                              : Colors.blue,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withValues(alpha: 0.35),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Transform.rotate(
+                          angle: _currentHeading * pi / 180,
+                          child: Icon(
+                            isActive
+                                ? Icons.navigation_rounded
+                                : Icons.my_location,
+                            color: Colors.white,
+                            size: 24,
                           ),
-                        ],
-                      ),
-                      child: Icon(
-                        isActive ? Icons.navigation_rounded : Icons.my_location,
-                        color: Colors.white,
-                        size: 24,
+                        ),
                       ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
               if (_stopMarkers.isNotEmpty) MarkerLayer(markers: _stopMarkers),
             ],
           ),
@@ -501,11 +578,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                 : _buildInfoCard(isDark, locationState),
           ),
           if (!isActive)
-            Positioned(
-              right: 16,
-              bottom: 180,
-              child: _buildLocateMeButton(),
-            ),
+            Positioned(right: 16, bottom: 180, child: _buildLocateMeButton()),
         ],
       ),
     );
@@ -538,8 +611,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF1E1E2E) : Colors.white)
-            .withValues(alpha: 0.95),
+        color: (isDark ? const Color(0xFF1E1E2E) : Colors.white).withValues(
+          alpha: 0.95,
+        ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: AppConstants.primaryGreen.withValues(alpha: 0.3),
@@ -560,39 +634,33 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
             'দূরত্ব',
             AppConstants.primaryGreen,
           ),
-          Container(
-              width: 1, height: 36, color: AppConstants.cardLine),
+          Container(width: 1, height: 36, color: AppConstants.cardLine),
           _meterItem(
             Icons.access_time_rounded,
             _formatDuration(_elapsed),
             'সময়',
             AppConstants.primaryAccent,
           ),
-          Container(
-              width: 1, height: 36, color: AppConstants.cardLine),
+          Container(width: 1, height: 36, color: AppConstants.cardLine),
           _meterItem(
             Icons.payments_outlined,
             '৳${tripState.currentFare.toStringAsFixed(0)}',
             'ভাড়া',
             AppConstants.fareAmber,
           ),
-          Container(
-              width: 1, height: 36, color: AppConstants.cardLine),
+          Container(width: 1, height: 36, color: AppConstants.cardLine),
           _meterItem(
             Icons.speed_rounded,
             '${speed.toStringAsFixed(0)} km/h',
             'গতি',
-            tripState.isJam
-                ? AppConstants.warn
-                : AppConstants.successGreen,
+            tripState.isJam ? AppConstants.warn : AppConstants.successGreen,
           ),
         ],
       ),
     );
   }
 
-  Widget _meterItem(
-      IconData icon, String value, String label, Color color) {
+  Widget _meterItem(IconData icon, String value, String label, Color color) {
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -637,8 +705,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF1E1E2E) : Colors.white)
-            .withValues(alpha: 0.95),
+        color: (isDark ? const Color(0xFF1E1E2E) : Colors.white).withValues(
+          alpha: 0.95,
+        ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AppConstants.primaryGreen.withValues(alpha: 0.3),
@@ -705,8 +774,8 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                 progress < 0.3
                     ? AppConstants.primaryGreen
                     : progress < 0.6
-                        ? AppConstants.fareAmber
-                        : AppConstants.errorRed,
+                    ? AppConstants.fareAmber
+                    : AppConstants.errorRed,
               ),
             ),
           ),
@@ -740,7 +809,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
               onLongPressStart: isStopping ? null : (_) => _startStopHold(),
               onLongPressEnd: isStopping ? null : (_) => _cancelStopHold(),
               onLongPressCancel: isStopping ? null : () => _cancelStopHold(),
-              onTap: isStopping ? null : () => _showStopConfirmDialog(tripState),
+              onTap: isStopping
+                  ? null
+                  : () => _showStopConfirmDialog(tripState),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -748,12 +819,17 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                   gradient: LinearGradient(
                     colors: isStopping
                         ? [Colors.grey, Colors.grey.shade400]
-                        : [AppConstants.errorRed, AppConstants.errorRed.withValues(alpha: 0.85)],
+                        : [
+                            AppConstants.errorRed,
+                            AppConstants.errorRed.withValues(alpha: 0.85),
+                          ],
                   ),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: AppConstants.errorRed.withValues(alpha: _isStopHolding ? 0.7 : 0.4),
+                      color: AppConstants.errorRed.withValues(
+                        alpha: _isStopHolding ? 0.7 : 0.4,
+                      ),
                       blurRadius: _isStopHolding ? 20 : 12,
                       spreadRadius: _isStopHolding ? -2 : -4,
                     ),
@@ -780,9 +856,13 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         AnimatedBuilder(
-                          animation: _isStopHolding ? _stopHoldController : const AlwaysStoppedAnimation(0),
+                          animation: _isStopHolding
+                              ? _stopHoldController
+                              : const AlwaysStoppedAnimation(0),
                           builder: (context, _) {
-                            final scale = _isStopHolding ? 0.85 + _stopHoldController.value * 0.3 : 1.0;
+                            final scale = _isStopHolding
+                                ? 0.85 + _stopHoldController.value * 0.3
+                                : 1.0;
                             return Transform.scale(
                               scale: scale,
                               child: Icon(
@@ -798,8 +878,8 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                           isStopping
                               ? 'থামানো হচ্ছে...'
                               : _isStopHolding
-                                  ? 'থামুন (${(_stopHoldController.value * 3).toStringAsFixed(0)}s)'
-                                  : 'থামুন',
+                              ? 'থামুন (${(_stopHoldController.value * 3).toStringAsFixed(0)}s)'
+                              : 'থামুন',
                           style: const TextStyle(
                             fontFamily: AppConstants.fontBengali,
                             fontSize: 16,
@@ -810,7 +890,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                         const SizedBox(width: 12),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
@@ -845,8 +927,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF1E1E2E) : Colors.white)
-            .withValues(alpha: 0.9),
+        color: (isDark ? const Color(0xFF1E1E2E) : Colors.white).withValues(
+          alpha: 0.9,
+        ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark
@@ -893,10 +976,11 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
               if (_nearbyStops.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppConstants.primaryGreen
-                        .withValues(alpha: 0.1),
+                    color: AppConstants.primaryGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -922,7 +1006,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                 itemBuilder: (_, i) {
                   final stop = _nearbyStops[i];
                   final dist = _calcDistanceKm(
-                      _currentPosition!, LatLng(stop.lat, stop.lng));
+                    _currentPosition!,
+                    LatLng(stop.lat, stop.lng),
+                  );
                   final isNearest = i == 0;
                   return GestureDetector(
                     onTap: () {
@@ -934,12 +1020,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: isNearest
-                            ? AppConstants.primaryGreen
-                                .withValues(alpha: 0.1)
-                            : (isDark
-                                    ? Colors.grey[800]
-                                    : Colors.grey[50])
-                                ?.withValues(alpha: 0.8),
+                            ? AppConstants.primaryGreen.withValues(alpha: 0.1)
+                            : (isDark ? Colors.grey[800] : Colors.grey[50])
+                                  ?.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isNearest
@@ -949,10 +1032,8 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                         ),
                       ),
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        mainAxisAlignment:
-                            MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.directions_bus_rounded,
@@ -967,13 +1048,12 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              fontFamily:
-                                  AppConstants.fontBengali,
+                              fontFamily: AppConstants.fontBengali,
                               color: isNearest
                                   ? AppConstants.primaryGreen
                                   : isDark
-                                      ? Colors.white
-                                      : Colors.black87,
+                                  ? Colors.white
+                                  : Colors.black87,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -983,11 +1063,11 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                             '${dist.toStringAsFixed(1)} কিমি',
                             style: TextStyle(
                               fontSize: 10,
-                              fontFamily:
-                                  AppConstants.fontEnglish,
+                              fontFamily: AppConstants.fontEnglish,
                               color: isNearest
-                                  ? AppConstants.primaryGreen
-                                      .withValues(alpha: 0.8)
+                                  ? AppConstants.primaryGreen.withValues(
+                                      alpha: 0.8,
+                                    )
                                   : Colors.grey[500],
                             ),
                           ),
@@ -1041,8 +1121,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
         ),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.15),
@@ -1086,8 +1165,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                             fontFamily: AppConstants.fontBengali,
-                            color:
-                                isDark ? Colors.white : Colors.black87,
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                         Text(
@@ -1121,7 +1199,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                 child: ListView.separated(
                   shrinkWrap: true,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   itemCount: stops.length,
                   separatorBuilder: (_, __) => Divider(
                     height: 1,
@@ -1136,8 +1216,9 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: AppConstants.primaryGreen
-                              .withValues(alpha: 0.1),
+                          color: AppConstants.primaryGreen.withValues(
+                            alpha: 0.1,
+                          ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -1152,20 +1233,18 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                           fontFamily: AppConstants.fontBengali,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color:
-                              isDark ? Colors.white : Colors.black87,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
                       subtitle: Text(
                         stop.name,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                        ),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                       ),
                       trailing: IconButton(
-                        icon: const Icon(Icons.directions_rounded,
-                            color: AppConstants.primaryAccent),
+                        icon: const Icon(
+                          Icons.directions_rounded,
+                          color: AppConstants.primaryAccent,
+                        ),
                         tooltip: 'দিকনির্দেশনা',
                         onPressed: () => _openDirections(stop),
                       ),
@@ -1234,10 +1313,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                       ),
                       Text(
                         stop.name,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[500],
-                        ),
+                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                       ),
                     ],
                   ),
@@ -1256,9 +1332,7 @@ class _FullMapScreenState extends ConsumerState<FullMapScreen>
                     icon: const Icon(Icons.directions_rounded, size: 18),
                     label: Text(
                       'দিকনির্দেশনা',
-                      style: TextStyle(
-                        fontFamily: AppConstants.fontBengali,
-                      ),
+                      style: TextStyle(fontFamily: AppConstants.fontBengali),
                     ),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1318,7 +1392,8 @@ class _StopHoldProgressPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width < size.height ? size.width : size.height) / 2 - 4;
+    final radius =
+        (size.width < size.height ? size.width : size.height) / 2 - 4;
     const startAngle = -pi / 2;
     final sweepAngle = 2 * pi * progress;
 

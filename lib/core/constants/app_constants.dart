@@ -8,16 +8,17 @@ class AppConstants {
 
   static const double fareRatePerKm = 2.53;
   static const double minimumFare = 10.0;
-  static const double gpsMaxAccuracy = 10.0;
+  // Keep usable fixes up to 20m; the filter below rejects implausible jumps.
+  static const double gpsMaxAccuracy = 20.0;
   static const double gpsHighAccuracy = 8.0;
   static const double gpsExcellentAccuracy = 5.0;
   static const double speedPauseThreshold = 0.5;
   static const double speedMovingThreshold = 1.0;
   static const double minDistanceDelta = 1.0;
-  static const double maxDistanceDelta = 30.0;
-  static const double gpsSmoothingAlpha = 0.35;
-  static const double speedSmoothingAlpha = 0.3;
-  static const double headingSmoothingAlpha = 0.25;
+  static const double maxDistanceDelta = 80.0;
+  static const double gpsSmoothingAlpha = 0.55;
+  static const double speedSmoothingAlpha = 0.35;
+  static const double headingSmoothingAlpha = 0.35;
 
   static const String tileUrl =
       'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
@@ -36,7 +37,9 @@ class AppConstants {
 
   // Brand palette (vibrant gradient / glass) -------------------------------
   static const Color primary = Color(0xFF7C3AED);
-  static const Color primaryGreen = Color(0xFF7C3AED); // legacy alias -> brand violet
+  static const Color primaryGreen = Color(
+    0xFF7C3AED,
+  ); // legacy alias -> brand violet
   static const Color primaryDeep = Color(0xFF6D28D9);
   static const Color pineDeep = Color(0xFF6D28D9); // legacy alias
   static const Color primaryAccent = Color(0xFFEC4899);
@@ -55,7 +58,10 @@ class AppConstants {
   static const Color backgroundDark = Color(0xFF0F0E1A);
 
   // Gradients ---------------------------------------------------------------
-  static const List<Color> brandGradient = [Color(0xFF8B5CF6), Color(0xFFEC4899)];
+  static const List<Color> brandGradient = [
+    Color(0xFF8B5CF6),
+    Color(0xFFEC4899),
+  ];
   static const List<Color> brandGradientLong = [
     Color(0xFF7C3AED),
     Color(0xFF8B5CF6),
@@ -66,9 +72,18 @@ class AppConstants {
     Color(0xFFA855F7),
     Color(0xFFEC4899),
   ];
-  static const List<Color> accentGradient = [Color(0xFF22D3EE), Color(0xFF3B82F6)];
-  static const List<Color> fareGradient = [Color(0xFFF59E0B), Color(0xFFFB923C)];
-  static const List<Color> successGradient = [Color(0xFF34D399), Color(0xFF22C55E)];
+  static const List<Color> accentGradient = [
+    Color(0xFF22D3EE),
+    Color(0xFF3B82F6),
+  ];
+  static const List<Color> fareGradient = [
+    Color(0xFFF59E0B),
+    Color(0xFFFB923C),
+  ];
+  static const List<Color> successGradient = [
+    Color(0xFF34D399),
+    Color(0xFF22C55E),
+  ];
 
   static const Alignment gradientBegin = Alignment.topLeft;
   static const Alignment gradientEnd = Alignment.bottomRight;
@@ -76,18 +91,18 @@ class AppConstants {
   static LinearGradient brandLinearGradient({
     Alignment begin = gradientBegin,
     Alignment end = gradientEnd,
-  }) =>
-      LinearGradient(begin: begin, end: end, colors: brandGradient);
+  }) => LinearGradient(begin: begin, end: end, colors: brandGradient);
 
   static LinearGradient heroLinearGradient({
     Alignment begin = gradientBegin,
     Alignment end = gradientEnd,
-  }) =>
-      LinearGradient(begin: begin, end: end, colors: heroGradient);
+  }) => LinearGradient(begin: begin, end: end, colors: heroGradient);
 
-  static LinearGradient gradientFrom(List<Color> colors,
-          {Alignment begin = gradientBegin, Alignment end = gradientEnd}) =>
-      LinearGradient(begin: begin, end: end, colors: colors);
+  static LinearGradient gradientFrom(
+    List<Color> colors, {
+    Alignment begin = gradientBegin,
+    Alignment end = gradientEnd,
+  }) => LinearGradient(begin: begin, end: end, colors: colors);
 
   // Glass tokens ------------------------------------------------------------
   static const double glassRadius = 24.0;
@@ -118,7 +133,10 @@ class AppConstants {
   static const double kissGlassBlur = 40.0;
   static const double kissGlassRadius = 15.0;
   static const double kissPillRadius = 50.0;
-  static const List<Color> kissGlowBlob = [Color(0xFFFFFCE4), Color(0xFFEC4899)];
+  static const List<Color> kissGlowBlob = [
+    Color(0xFFFFFCE4),
+    Color(0xFFEC4899),
+  ];
 
   static const double journeySearchRadiusMeters = 1500.0;
   static const double journeyTransferMaxWalkMeters = 500.0;
@@ -134,7 +152,7 @@ class AppConstants {
   static const double scoreWalkWeight = 0.30;
 
   static String toBanglaNum(String input) {
-    const bangla = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+    const bangla = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return input.split('').map((c) {
       final d = int.tryParse(c);
       return d != null ? bangla[d] : c;
