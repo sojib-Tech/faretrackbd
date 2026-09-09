@@ -1,7 +1,7 @@
 name: faretrackbd
 description: "FareTrack BD - Bus Fare Tracking App for Dhaka City"
 publish_to: 'none'
-version: 1.0.3+4
+version: 1.0.4+5
 
 environment:
   sdk: ^3.11.5

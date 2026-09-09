@@ -37,14 +37,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       firebaseUser = null;
     }
     final isLoggedIn = authState.isAuthenticated || firebaseUser != null;
-    final isGuest = authState.isGuestMode;
 
     if (mounted) {
       if (!onboardingComplete) {
         context.go('/onboarding');
       } else if (authState.isAdmin) {
         context.go('/admin');
-      } else if (isLoggedIn || isGuest) {
+      } else if (isLoggedIn) {
         context.go('/home');
       } else {
         context.go('/auth');

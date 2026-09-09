@@ -645,50 +645,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     );
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    FocusScope.of(context).unfocus();
+    final success = await ref.read(authProvider.notifier).signInWithGoogle();
+    if (success && mounted) context.go('/home');
+  }
+
   Widget _buildGuestOption() {
     return GestureDetector(
       onTap: () async {
         await ref.read(authProvider.notifier).enterGuestMode();
         if (mounted) context.go('/home');
       },
-      child: Container(
-        width: double.infinity,
-        height: 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: const Color(0xFFFFFFFF).withValues(alpha: 0.15),
-          ),
-          color: const Color(0xFFFFFFFF).withValues(alpha: 0.04),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.person_outline_rounded,
-              size: 18,
-              color: Colors.white.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'সাইন-ইন না করে চালু করুন',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
+      child: Text(
+        'সাইন-ইন ছাড়া চালু করুন',
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          color: Colors.white.withValues(alpha: 0.65),
         ),
       ),
     );
-  }
-
-  Future<void> _handleGoogleSignIn() async {
-    FocusScope.of(context).unfocus();
-    final success = await ref.read(authProvider.notifier).signInWithGoogle();
-    if (success && mounted) context.go('/home');
   }
 
   Widget _buildGoogleOption(AuthState authState) {

@@ -69,9 +69,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final localUser = await _storage.getCurrentUser();
         if (localUser != null) {
           state = AuthState(user: localUser);
-        } else if (_storage.isGuestSession()) {
-          state = AuthState(isGuest: true);
         } else {
+          await _storage.clearGuestSession();
           state = AuthState();
         }
         return;
@@ -140,11 +139,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       await _storage.clearCurrentUser();
     } catch (_) {}
-    if (_storage.isGuestSession()) {
-      state = AuthState(isGuest: true);
-    } else {
-      state = AuthState();
-    }
+    await _storage.clearGuestSession();
+    state = AuthState();
   }
 
   Future<bool> _checkFirebaseInit() async {

@@ -52,11 +52,17 @@ GoRouter _createRouter(Ref ref) {
     initialLocation: '/splash',
     redirect: (context, state) {
       final authState = ref.read(authProvider);
-      final isGuest = authState.isGuestMode;
       final path = state.matchedLocation;
 
-      if (isGuest && restrictedRoutes.contains(path)) {
-        return '/home';
+      final isAuthenticated =
+          authState.isAuthenticated ||
+          authState.isAdmin ||
+          authState.isGuestMode;
+      if (!isAuthenticated && path == '/home') {
+        return '/auth';
+      }
+      if (!isAuthenticated && restrictedRoutes.contains(path)) {
+        return '/auth';
       }
       return null;
     },

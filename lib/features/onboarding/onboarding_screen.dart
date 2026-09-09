@@ -51,7 +51,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _completeOnboarding() async {
     final storage = ref.read(storageServiceProvider);
     await storage.setOnboardingComplete();
-    if (mounted) context.go('/home');
+    if (mounted) context.go('/auth');
   }
 
   @override
@@ -64,11 +64,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0A3D6B),
-              Color(0xFF072A4A),
-              Color(0xFF041A2E),
-            ],
+            colors: [Color(0xFF0A3D6B), Color(0xFF072A4A), Color(0xFF041A2E)],
           ),
         ),
         child: SafeArea(
@@ -182,10 +178,7 @@ class _OnboardContent extends StatelessWidget {
   final _OnboardPage page;
   final bool isActive;
 
-  const _OnboardContent({
-    required this.page,
-    required this.isActive,
-  });
+  const _OnboardContent({required this.page, required this.isActive});
 
   @override
   Widget build(BuildContext context) {
@@ -196,43 +189,39 @@ class _OnboardContent extends StatelessWidget {
         children: [
           // Glass illustration card
           Container(
-            width: 180,
-            height: 180,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(40),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: 0.1),
-                  Colors.white.withValues(alpha: 0.03),
-                ],
-              ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 1.5,
-              ),
-            ),
-            child: Container(
-              margin: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    page.gradient.first.withValues(alpha: 0.7),
-                    page.gradient.last.withValues(alpha: 0.5),
-                  ],
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(40),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.1),
+                      Colors.white.withValues(alpha: 0.03),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    width: 1.5,
+                  ),
                 ),
-              ),
-              child: Icon(
-                page.icon,
-                size: 70,
-                color: Colors.white,
-              ),
-            ),
-          )
+                child: Container(
+                  margin: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        page.gradient.first.withValues(alpha: 0.7),
+                        page.gradient.last.withValues(alpha: 0.5),
+                      ],
+                    ),
+                  ),
+                  child: Icon(page.icon, size: 70, color: Colors.white),
+                ),
+              )
               .animate(target: isActive ? 1 : 0)
               .scale(
                 duration: 700.ms,
@@ -245,16 +234,16 @@ class _OnboardContent extends StatelessWidget {
 
           // Title
           Text(
-            page.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              fontFamily: AppConstants.fontBengali,
-              color: Colors.white,
-              height: 1.3,
-            ),
-          )
+                page.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: AppConstants.fontBengali,
+                  color: Colors.white,
+                  height: 1.3,
+                ),
+              )
               .animate(target: isActive ? 1 : 0)
               .fadeIn(duration: 500.ms, delay: 100.ms)
               .slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
@@ -263,18 +252,18 @@ class _OnboardContent extends StatelessWidget {
 
           // Subtitle
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              page.subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.6,
-                color: Colors.white.withValues(alpha: 0.65),
-                fontFamily: AppConstants.fontBengali,
-              ),
-            ),
-          )
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  page.subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Colors.white.withValues(alpha: 0.65),
+                    fontFamily: AppConstants.fontBengali,
+                  ),
+                ),
+              )
               .animate(target: isActive ? 1 : 0)
               .fadeIn(duration: 600.ms, delay: 200.ms)
               .slideY(begin: 0.15, end: 0, curve: Curves.easeOutCubic),
